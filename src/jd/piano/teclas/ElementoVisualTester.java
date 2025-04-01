@@ -1,5 +1,8 @@
 package jd.piano.teclas;
 
+import bpc.daw.consola.CapaCanvas;
+import bpc.daw.consola.Consola;
+
 import java.awt.*;
 
 public class ElementoVisualTester {
@@ -7,15 +10,18 @@ public class ElementoVisualTester {
     private ElementoVisual elemento;
 
     public ElementoVisualTester(Graphics g) {
-        throw new UnsupportedOperationException();
+        this.graphics = g;
+        this.elemento = null;
     }
 
     public ElementoVisualTester() {
-        throw new UnsupportedOperationException();
+        this.elemento = null;
+        Consola c1 = new Consola();
+        this.graphics = c1.getCapaCanvas().getGraphics();
     }
 
     public void setElementoVisual(ElementoVisual e) {
-        throw new UnsupportedOperationException();
+        this.elemento = e;
     }
 
     public boolean hacerPrueba() {

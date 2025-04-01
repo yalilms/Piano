@@ -25,6 +25,32 @@ public class ElementoVisualTester {
     }
 
     public boolean hacerPrueba() {
-        throw new UnsupportedOperationException();
+        boolean exitoPrueba = false;
+
+        this.elemento.setPosicion(120, 90);
+        this.elemento.setGraphics(this.graphics);
+        this.elemento.dibujar();
+        if (this.elemento instanceof Pulsable p) {
+            p.setColorPulsado(Color.BLUE);
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException error) {
+                System.out.println(error.getMessage());
+            }
+            p.pulsar();
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException error) {
+                System.out.println(error.getMessage());
+            }
+            p.soltar();
+        }
+        Consola c1 = new Consola();
+        c1.getCapaTexto().println("¿Ha salido el test bien?");
+        char respuesta = c1.getTeclado().leerCaracter();
+        if (respuesta == 's' || respuesta == 'S') {
+            exitoPrueba = true;
+        }
+        return exitoPrueba;
     }
 }

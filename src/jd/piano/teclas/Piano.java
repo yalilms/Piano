@@ -12,7 +12,7 @@ public abstract class Piano {
     public Piano(){
 
     }
-    // public abstract Tecla getTecla(int canal, int nota);
+    public abstract Tecla getTecla(int canal, int nota);
 
     public int getTeclaInicial() {
         return this.teclaInicial;

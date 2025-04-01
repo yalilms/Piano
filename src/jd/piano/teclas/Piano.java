@@ -3,7 +3,7 @@ package jd.piano.teclas;
 import javax.swing.text.Position;
 import java.awt.*;
 
-public abstract class Piano {
+public abstract class Piano implements ElementoVisual{
     private int teclaInicial;
     private int teclaFinal;
     private Position posicion;

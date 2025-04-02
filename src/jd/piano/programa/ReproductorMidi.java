@@ -6,7 +6,7 @@ import javax.sound.midi.MidiMessage;
 import javax.sound.midi.Receiver;
 import java.awt.*;
 
-public class ReproductorMidi{
+public class ReproductorMidi implements Receiver{
 
     private static final Color[] COLORES = new Color[16];
     // private PianoMidi piano; --> PianoMidi no existe
@@ -23,4 +23,13 @@ public class ReproductorMidi{
         throw new NullPointerException();
     }
 
+    @Override
+    public void send(MidiMessage message, long timeStamp) {
+        throw new NullPointerException();
+    }
+
+    @Override
+    public void close() {
+        throw new NullPointerException();
+    }
 }

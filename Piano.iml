@@ -8,5 +8,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="ConsolaDAW" level="project" />
+    <orderEntry type="library" name="ConsolaDAW1" level="project" />
   </component>
 </module>

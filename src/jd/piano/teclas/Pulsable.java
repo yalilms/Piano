@@ -3,7 +3,7 @@ package jd.piano.teclas;
 import java.awt.*;
 import java.awt.image.ConvolveOp;
 
-public interface Pulsable {
+public interface Pulsable extends ElementoVisual{
 
     public abstract void pulsar();
     public abstract void soltar();

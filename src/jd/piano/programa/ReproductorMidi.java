@@ -7,7 +7,7 @@ import javax.sound.midi.*;
 import java.awt.*;
 import java.io.File;
 
-public class ReproductorMidi implements Receiver{
+public class ReproductorMidi implements Receiver {
 
     private static final Color[] COLORES = new Color[16];
     private Piano piano; //--> PianoMidi no existe
@@ -71,6 +71,5 @@ public class ReproductorMidi implements Receiver{
 
     @Override
     public void close() {
-
     }
 }

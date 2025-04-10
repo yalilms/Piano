@@ -1,52 +1,40 @@
 package jd.piano.teclas;
 
+import javax.swing.text.Position;
 import java.awt.*;
 
 public class TeclaNegra extends Tecla{
-    public static int ANCHURA;
-    public static int ALTURA;
+    public static final int ANCHURA = 15;
+    public static final int ALTURA = 50;
 
     TeclaNegra(int n) {
         super(n);
     }
 
     @Override
+    public Color getColorNoPulsado() {
+        return Color.BLACK;
+    }
+
+    @Override
+    public int getAnchura() {
+        return TeclaNegra.ANCHURA;
+    }
+
+    @Override
+    public int getAltura() {
+        return TeclaNegra.ALTURA;
+    }
+
+    @Override
     protected int[] getVerticesX() {
-        return new int[0];
+        int x = this.posicion.x;
+        return new int[] {x, x, x+TeclaNegra.ANCHURA, x+TeclaNegra.ANCHURA};
     }
 
     @Override
     protected int[] getVerticesY() {
-        return new int[0];
-    }
-
-    @Override
-    public void pulsar() {
-
-    }
-
-    @Override
-    public void soltar() {
-
-    }
-
-    @Override
-    public boolean estaPulsado() {
-        return false;
-    }
-
-    @Override
-    public void setColorPulsado(Color c) {
-
-    }
-
-    @Override
-    public Color getColorPulsado() {
-        return null;
-    }
-
-    @Override
-    public Color getColorNoPulsado() {
-        return null;
+        int y = this.posicion.y;
+        return new int[] {y, y+TeclaNegra.ALTURA, y+TeclaNegra.ALTURA, y};
     }
 }

@@ -23,6 +23,11 @@ public abstract class Tecla implements Pulsable{
     }
 
     @Override
+    public void setGraphics(Graphics graphics) {
+        this.graphics = graphics;
+    }
+
+    @Override
     public void setPosicion(int x, int y) {
         this.posicion = new Point(x, y);
     }

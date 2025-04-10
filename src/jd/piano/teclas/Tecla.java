@@ -47,7 +47,7 @@ public abstract class Tecla implements Pulsable{
         if (this.posicion == null || this.graphics == null) {
             throw new IllegalStateException("Hay que llamar a setPosicion y setGraphics "+
                     "antes de llamar al metodo dibujar");
-        }
+        } 
         this.graphics.setColor(this.getColor());
         this.graphics.fillPolygon(this.getVerticesX(), this.getVerticesY(), 4);
         this.graphics.setColor(Color.BLACK);

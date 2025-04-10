@@ -44,6 +44,7 @@ public class MultiPiano extends Piano {
                 } else {
                     this.pianos.get(i).setPosicion(x, y);
                 }
+                this.pianos.get(j).dibujar();
             }
             y += this.pianos.getFirst().getAltura();
         }

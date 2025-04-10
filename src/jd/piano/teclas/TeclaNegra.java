@@ -3,6 +3,8 @@ package jd.piano.teclas;
 import javax.swing.text.Position;
 import java.awt.*;
 
+//-----------------------------> REALIZAR TESTS!!! <-------------------------------
+
 public class TeclaNegra extends Tecla{
     public static final int ANCHURA = 15;
     public static final int ALTURA = 50;

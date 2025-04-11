@@ -6,10 +6,28 @@ import jd.piano.teclas.Tecla;
 import javax.sound.midi.*;
 import java.awt.*;
 import java.io.File;
+import java.util.List;
 
 public class ReproductorMidi implements Receiver {
 
-    private static final Color[] COLORES = new Color[16];
+    private static final Color[] COLORES = {
+            Color.RED,
+            Color.BLUE,
+            Color.GREEN,
+            Color.YELLOW,
+            Color.MAGENTA,
+            Color.ORANGE,
+            Color.CYAN,
+            Color.PINK,
+            new Color(128, 0, 128),   // Púrpura
+            new Color(0, 128, 128),   // Verde azulado
+            new Color(255, 165, 0),   // Naranja claro
+            new Color(0, 255, 127),   // Verde primavera
+            new Color(70, 130, 180),  // Azul acero
+            new Color(210, 105, 30),  // Chocolate
+            new Color(255, 20, 147),  // Rosa profundo
+            new Color(105, 105, 105)  // Gris oscuro
+    };
     private Piano piano;
 
     public ReproductorMidi(){

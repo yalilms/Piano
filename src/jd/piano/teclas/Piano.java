@@ -1,13 +1,12 @@
 package jd.piano.teclas;
 
-import javax.swing.text.Position;
 import java.awt.*;
 
 public abstract class Piano implements ElementoVisual{
-    private int teclaInicial;
-    private int teclaFinal;
-    private Position posicion;
-    private Graphics graphics;
+    protected int teclaInicial;
+    protected int teclaFinal;
+    protected Point posicion;
+    protected Graphics graphics;
 
     public Piano(){
         this.teclaInicial = 0;
@@ -15,6 +14,17 @@ public abstract class Piano implements ElementoVisual{
         this.posicion = null;
         this.graphics = null;
     }
+    
+    @Override
+    public void setPosicion(int x, int y) {
+        this.posicion = new Point(x, y);
+    }
+    
+    @Override
+    public void setGraphics(Graphics g) {
+        this.graphics = g;
+    }
+    
     public abstract Tecla getTecla(int canal, int nota);
 
     public int getTeclaInicial() {

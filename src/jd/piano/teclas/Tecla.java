@@ -9,7 +9,7 @@ public abstract class Tecla implements Pulsable{
     private Color colorPulsada;
     private Graphics graphics;
 
-    Tecla(int n) {
+    public Tecla(int n) {
         this.nota = n;
 
         this.posicion = null;

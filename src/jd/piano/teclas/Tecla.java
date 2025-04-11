@@ -48,10 +48,13 @@ public abstract class Tecla implements Pulsable{
             throw new IllegalStateException("Hay que llamar a setPosicion y setGraphics "+
                     "antes de llamar al metodo dibujar");
         } 
+        int[] verticesX = this.getVerticesX();
+        int[] verticesY = this.getVerticesY();
+        
         this.graphics.setColor(this.getColor());
-        this.graphics.fillPolygon(this.getVerticesX(), this.getVerticesY(), 4);
+        this.graphics.fillPolygon(verticesX, verticesY, verticesX.length);
         this.graphics.setColor(Color.BLACK);
-        this.graphics.drawPolygon(this.getVerticesX(), this.getVerticesY(), 4);
+        this.graphics.drawPolygon(verticesX, verticesY, verticesX.length);
     }
 
     @Override

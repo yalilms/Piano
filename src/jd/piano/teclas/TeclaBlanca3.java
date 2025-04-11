@@ -13,12 +13,28 @@ public class TeclaBlanca3 extends TeclaBlanca {
         int x = this.posicion.x;
         final int N = TeclaNegra.ANCHURA;
         final int B = TeclaBlanca.ANCHURA;
-        return new int[] {x, x, x+B, x+B, x+N/2, x+N/2};
+        // Forma: rectángulo con corte en la parte izquierda
+        return new int[] {
+            x,          // Punto superior izquierdo
+            x,          // Punto inferior izquierdo
+            x + B,      // Punto inferior derecho
+            x + B,      // Punto superior derecho
+            x + N/2,    // Punto superior izquierdo interior
+            x + N/2     // Punto izquierdo hasta altura tecla negra
+        };
     }
 
     @Override
     protected int[] getVerticesY() {
         int y = this.posicion.y;
-        return new int[] {y, y+TeclaBlanca.ALTURA, y+TeclaBlanca.ALTURA, y+TeclaNegra.ALTURA, y+TeclaNegra.ALTURA, y};
+        // Los puntos Y corresponden con los X de arriba
+        return new int[] {
+            y,                      // Punto superior izquierdo
+            y + TeclaBlanca.ALTURA, // Punto inferior izquierdo
+            y + TeclaBlanca.ALTURA, // Punto inferior derecho
+            y,                      // Punto superior derecho
+            y,                      // Punto superior izquierdo interior
+            y + TeclaNegra.ALTURA   // Punto izquierdo hasta altura tecla negra
+        };
     }
 }

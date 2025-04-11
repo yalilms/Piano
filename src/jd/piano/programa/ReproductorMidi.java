@@ -19,14 +19,14 @@ public class ReproductorMidi implements Receiver {
             Color.ORANGE,
             Color.CYAN,
             Color.PINK,
-            new Color(128, 0, 128),   // Púrpura
-            new Color(0, 128, 128),   // Verde azulado
-            new Color(255, 165, 0),   // Naranja claro
-            new Color(0, 255, 127),   // Verde primavera
-            new Color(70, 130, 180),  // Azul acero
-            new Color(210, 105, 30),  // Chocolate
-            new Color(255, 20, 147),  // Rosa profundo
-            new Color(105, 105, 105)  // Gris oscuro
+            new Color(128, 0, 128),
+            new Color(0, 128, 128),
+            new Color(255, 165, 0),
+            new Color(0, 255, 127),
+            new Color(70, 130, 180),
+            new Color(210, 105, 30),
+            new Color(255, 20, 147),
+            new Color(105, 105, 105)
     };
     private Piano piano;
 

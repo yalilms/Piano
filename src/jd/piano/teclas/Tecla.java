@@ -11,7 +11,6 @@ public abstract class Tecla implements Pulsable{
 
     public Tecla(int n) {
         this.nota = n;
-
         this.posicion = null;
         this.pulsada = false;
         this.colorPulsada = null;
@@ -74,5 +73,4 @@ public abstract class Tecla implements Pulsable{
 
     protected abstract int[] getVerticesX();
     protected abstract int[] getVerticesY();
-
 }

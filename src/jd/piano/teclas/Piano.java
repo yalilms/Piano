@@ -3,10 +3,10 @@ package jd.piano.teclas;
 import java.awt.*;
 
 public abstract class Piano implements ElementoVisual{
-    protected int teclaInicial;
-    protected int teclaFinal;
-    protected Point posicion;
-    protected Graphics graphics;
+    private int teclaInicial;
+    private int teclaFinal;
+    private Point posicion;
+    private Graphics graphics;
 
     public Piano(){
         this.teclaInicial = 0;
@@ -33,5 +33,21 @@ public abstract class Piano implements ElementoVisual{
 
     public int getTeclaFinal() {
         return this.teclaFinal;
+    }
+
+    protected void setTeclaInicial(int ti) {
+        this.teclaInicial = ti;
+    }
+
+    protected void setTeclaFinal(int tf) {
+        this.teclaFinal = tf;
+    }
+
+    protected Point getPosicion() {
+        return this.posicion;
+    }
+
+    protected Graphics getGraphics() {
+        return this.graphics;
     }
 }

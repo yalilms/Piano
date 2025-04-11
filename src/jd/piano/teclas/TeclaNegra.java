@@ -3,7 +3,6 @@ package jd.piano.teclas;
 import javax.swing.text.Position;
 import java.awt.*;
 
-//-----------------------------> REALIZAR TESTS!!! <-------------------------------
 
 public class TeclaNegra extends Tecla{
     public static final int ANCHURA = 15;
@@ -31,12 +30,22 @@ public class TeclaNegra extends Tecla{
     @Override
     protected int[] getVerticesX() {
         int x = this.posicion.x;
-        return new int[] {x, x, x+TeclaNegra.ANCHURA, x+TeclaNegra.ANCHURA};
+        return new int[] {
+                x,
+                x,
+                x+TeclaNegra.ANCHURA,
+                x+TeclaNegra.ANCHURA
+        };
     }
 
     @Override
     protected int[] getVerticesY() {
         int y = this.posicion.y;
-        return new int[] {y, y+TeclaNegra.ALTURA, y+TeclaNegra.ALTURA, y};
+        return new int[] {
+                y,
+                y+TeclaNegra.ALTURA,
+                y+TeclaNegra.ALTURA,
+                y
+        };
     }
 }

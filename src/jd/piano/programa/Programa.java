@@ -2,6 +2,7 @@ package jd.piano.programa;
 import bpc.daw.consola.*;
 import jd.piano.teclas.Piano;
 
+import java.awt.*;
 import java.io.File;
 
 public class Programa {
@@ -29,21 +30,26 @@ public class Programa {
         capaTexto.cls();
 
         Piano piano = null;
+        CapaCanvas canvas = consola.getCapaCanvas();
+        Graphics g = canvas.getGraphics();
+        
         switch (opcion) {
             case 1 -> {
                 piano = new PianoSencillo(24, 108);
-                piano.setPosicion(0, 0);
-                piano.setGraphics(consola.getCapaCanvas().getGraphics());
+                piano.setPosicion(50, 50);
+                piano.setGraphics(g);
                 piano.dibujar();
             }
-             case 2 -> {
-                 piano = new MultiPiano(24, 108);
-                 piano.setPosicion(0, 0);
-                 piano.setGraphics(consola.getCapaCanvas().getGraphics());
-                 piano.dibujar();
-             }
-             default -> System.out.println("OPCION NO VALIDA");
-         }
+            case 2 -> {
+                piano = new MultiPiano(24, 108);
+                piano.setPosicion(20, 20);
+                piano.setGraphics(g);
+                piano.dibujar();
+            }
+            default -> {
+                System.out.println("OPCION NO VALIDA");
+            }
+        }
 
         try {
             ReproductorMidi reproductorMidi = new ReproductorMidi();
@@ -52,6 +58,5 @@ public class Programa {
         } catch (Exception error) {
             System.out.println(error.getMessage());
         }
-
     }
 }

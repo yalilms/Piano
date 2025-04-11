@@ -26,9 +26,10 @@ public class Programa {
                 2) Multi Piano
                 """);
         int opcion = teclado.leerNumeroEntero();
+        capaTexto.cls();
 
         Piano piano = null;
-         switch (opcion) {
+        switch (opcion) {
             case 1 -> {
                 piano = new PianoSencillo(24, 108);
                 piano.setPosicion(0, 0);

@@ -14,7 +14,7 @@ public class MultiPiano extends Piano {
 
     public MultiPiano(int ti, int tf){
         this.pianos = new ArrayList<>();
-        for (int i = 0; i <= 16; i++) {
+        for (int i = 0; i < 16; i++) {
             this.pianos.add(i, new PianoSencillo(ti, tf));
         }
     }

@@ -35,7 +35,6 @@ public class PianoSencillo extends Piano {
                 teclaNegra.setPosicion(x1-TeclaNegra.ANCHURA/2, y1);
             }
         }
-        this.dibujar();
     }
 
     @Override

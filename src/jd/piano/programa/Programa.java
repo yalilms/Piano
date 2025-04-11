@@ -42,7 +42,7 @@ public class Programa {
                  piano.dibujar();
              }
              default -> System.out.println("OPCION NO VALIDA");
-         };
+         }
 
         try {
             ReproductorMidi reproductorMidi = new ReproductorMidi();

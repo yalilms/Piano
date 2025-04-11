@@ -42,32 +42,39 @@ public class ReproductorMidi implements Receiver {
 
     @Override
     public void send(MidiMessage message, long timeStamp) {
-        if (!(message instanceof ShortMessage)) return;
+        boolean continuar = message instanceof ShortMessage;
 
-        ShortMessage sm = (ShortMessage) message;
-        int canal = sm.getChannel();
-        if (canal == 9) return; // canal de percusión
+        if (continuar) {
+            ShortMessage sm = (ShortMessage) message;
+            int canal = sm.getChannel();
+            int nota = sm.getData1();
+            int comando = sm.getCommand();
 
-        int nota = sm.getData1();
-        Tecla tecla = piano.getTecla(canal, nota);
-        if (tecla == null) return;
+            continuar = canal != 9;
 
-        int comando = sm.getCommand();
+            if (continuar) {
+                Tecla tecla = piano.getTecla(canal, nota);
+                continuar = tecla != null;
 
-        if (comando == ShortMessage.NOTE_ON) {
-            int volumen = sm.getData2();
-            if (volumen > 0) {
-                tecla.setColorPulsado(COLORES[canal]);
-                tecla.pulsar();
-            } else {
-                tecla.soltar();
+                if (continuar) {
+                    if (comando == ShortMessage.NOTE_ON) {
+                        int volumen = sm.getData2();
+                        if (volumen > 0) {
+                            tecla.setColorPulsado(COLORES[canal]);
+                            tecla.pulsar();
+                        } else {
+                            tecla.soltar();
+                        }
+                    } else if (comando == ShortMessage.NOTE_OFF) {
+                        tecla.soltar();
+                    }
+
+                    tecla.dibujar();
+                }
             }
-        } else if (comando == ShortMessage.NOTE_OFF) {
-            tecla.soltar();
         }
-
-        tecla.dibujar();
     }
+
 
     @Override
     public void close() {

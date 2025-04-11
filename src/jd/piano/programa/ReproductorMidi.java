@@ -37,7 +37,7 @@ public class ReproductorMidi implements Receiver {
     }
 
     public void conectar(Piano p){
-        this.piano = piano;
+        this.piano = p;
     }
 
     @Override

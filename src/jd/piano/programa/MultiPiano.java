@@ -38,8 +38,8 @@ public class MultiPiano extends Piano {
         int espacioEntreFilas = 30;
         int espacioEntreColumnas = 40;
         
-        int anchoUnPiano = this.pianos.get(0).getAnchura();
-        int altoUnPiano = this.pianos.get(0).getAltura();
+        int anchoUnPiano = this.pianos.getFirst().getAnchura();
+        int altoUnPiano = this.pianos.getFirst().getAltura();
         
         for (int i = 0; i < pianos.size(); i++) {
             int fila = i / columnas;

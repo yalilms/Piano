@@ -30,15 +30,14 @@ public class PianoSencillo extends Piano {
         int x1 = x;
         int y1 = y;
 
-        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
+        for (int i = this.getTeclaInicial(); i <= this.getTeclaFinal(); i++) {
             Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaBlanca) {
-                tecla.setPosicion(x1, y1);
-                x1 += TeclaBlanca.ANCHURA;
+            if (tecla instanceof TeclaBlanca teclaBlanca) {
+                teclaBlanca.setPosicion(x1, y1);
+                x1 += teclaBlanca.getAnchura();
             }
-            if (tecla instanceof TeclaNegra) {
-                int posX = x;
-                tecla.setPosicion(posX, y1);
+            if (tecla instanceof TeclaNegra teclaNegra) {
+                teclaNegra.setPosicion(x1-TeclaNegra.ANCHURA/2, y1);
             }
         }
     }
@@ -53,19 +52,13 @@ public class PianoSencillo extends Piano {
 
     @Override
     public void dibujar() {
-        // Primero dibujamos las teclas blancas
         for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
             Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaBlanca) {
-                tecla.dibujar();
+            if (tecla instanceof TeclaBlanca teclaBlanca) {
+                teclaBlanca.dibujar();
             }
-        }
-        
-        // Luego dibujamos las teclas negras encima
-        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
-            Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaNegra) {
-                tecla.dibujar();
+            if (tecla instanceof TeclaNegra teclaNegra) {
+                teclaNegra.dibujar();
             }
         }
     }

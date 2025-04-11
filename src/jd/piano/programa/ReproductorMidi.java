@@ -10,7 +10,7 @@ import java.io.File;
 public class ReproductorMidi implements Receiver {
 
     private static final Color[] COLORES = new Color[16];
-    private Piano piano; //--> PianoMidi no existe
+    private Piano piano;
 
     public ReproductorMidi(){
         this.piano = null;

@@ -69,6 +69,9 @@ public class ProgramaSwing {
         escena.setPiano(piano);
         piano.setPosicion((escena.getAnchura() - piano.getAnchura()) / 2,
                 (escena.getAltura() - piano.getAltura()) / 2);
+        // Con el piano ya colocado y antes de que suene nada: las teclas se
+        // hornean en reposo dentro de la imagen cacheada.
+        escena.prepararCaches();
 
         Lienzo lienzo = new Lienzo("Piano MIDI - " + new File(rutaCancion).getName(), escena);
         lienzo.mostrar();

@@ -1,9 +1,11 @@
 package jd.piano.programa;
 
+import jd.piano.teclas.Estilo;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -55,10 +57,43 @@ public class MultiPiano extends Piano {
         }
     }
 
+    /**
+     * Se salta de golpe los teclados que no tocan el recorte, para no ir
+     * preguntando tecla a tecla en los otros quince.
+     */
     @Override
     public void dibujar(Graphics2D g) {
+        Rectangle recorte = g.getClipBounds();
         for (PianoSencillo piano : this.pianos) {
-            piano.dibujar(g);
+            if (recorte == null || tocaElRecorte(piano, recorte)) {
+                piano.dibujar(g);
+            }
+        }
+    }
+
+    private static boolean tocaElRecorte(PianoSencillo piano, Rectangle recorte) {
+        Rectangle limites = piano.getLimites();
+        boolean toca = limites == null;
+        if (limites != null) {
+            Rectangle holgado = new Rectangle(limites);
+            holgado.grow(Tecla.MARGEN_REPINTADO + Estilo.FIELTRO_ALTURA,
+                    Tecla.MARGEN_REPINTADO + Estilo.FIELTRO_ALTURA);
+            toca = holgado.intersects(recorte);
+        }
+        return toca;
+    }
+
+    @Override
+    public void dibujarBrillos(Graphics2D g) {
+        for (PianoSencillo piano : this.pianos) {
+            piano.dibujarBrillos(g);
+        }
+    }
+
+    @Override
+    public void anadirRegionesActivas(List<Rectangle> destino) {
+        for (PianoSencillo piano : this.pianos) {
+            piano.anadirRegionesActivas(destino);
         }
     }
 

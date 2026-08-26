@@ -31,5 +31,5 @@ bin/
 ### Librerías del proyecto (ver lib/LEEME.md) ###
 lib/*.jar
 
-### Capturas de las pruebas de render ###
-*.png
+### Capturas de las pruebas de render (solo en la raiz) ###
+/*.png

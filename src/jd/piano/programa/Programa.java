@@ -4,12 +4,19 @@ import jd.piano.teclas.Piano;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
 public class Programa {
+
+    private static final int NOTA_INICIAL = 24;
+    private static final int NOTA_FINAL = 108;
+
+    // El multipiano dibuja 16 teclados a la vez, por eso usa un rango mas corto
+    private static final int NOTA_INICIAL_MULTI = 48;
+    private static final int NOTA_FINAL_MULTI = 71;
+
     public static void main(String[] args) {
         Consola consola = new Consola();
         CapaFondo capaFondo = consola.getCapaFondo();
@@ -57,17 +64,17 @@ public class Programa {
                 Graphics g = consola.getCapaCanvas().getGraphics();
                 
                 if (opcion == 1) {
-                    piano = new PianoSencillo(24, 108);
-                    piano.setPosicion(coordx/9, coordy/2);
+                    piano = new PianoSencillo(NOTA_INICIAL, NOTA_FINAL);
                 } else if (opcion == 2) {
-                    piano = new MultiPiano(24, 108);
-                    piano.setPosicion(20, 20);
+                    piano = new MultiPiano(NOTA_INICIAL_MULTI, NOTA_FINAL_MULTI);
                 } else {
                     ejecutar = false;
                     texto.println("Opción no válida");
                 }
 
                 if (ejecutar) {
+                    piano.setPosicion((coordx - piano.getAnchura()) / 2,
+                            (coordy - piano.getAltura()) / 2);
                     piano.setGraphics(g);
                     piano.dibujar();
                 }

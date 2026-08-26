@@ -27,3 +27,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Librerías del proyecto (ver lib/LEEME.md) ###
+lib/*.jar

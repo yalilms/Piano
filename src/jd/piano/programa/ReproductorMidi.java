@@ -6,7 +6,6 @@ import jd.piano.teclas.Tecla;
 import javax.sound.midi.*;
 import java.awt.*;
 import java.io.File;
-import java.util.List;
 
 public class ReproductorMidi implements Receiver {
 

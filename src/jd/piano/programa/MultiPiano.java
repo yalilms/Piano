@@ -2,7 +2,6 @@ package jd.piano.programa;
 
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
-import jd.piano.teclas.TeclaBlanca;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -10,13 +9,21 @@ import java.util.List;
 
 public class MultiPiano extends Piano {
 
+    public static final int CANALES = 16;
+
+    // FILAS * COLUMNAS debe valer CANALES
+    private static final int FILAS = 4;
+    private static final int COLUMNAS = 4;
+    private static final int ESPACIO_X = 10;
+    private static final int ESPACIO_Y = 20;
+
     private List<PianoSencillo> pianos;
 
     public MultiPiano(int ti, int tf) {
         setTeclaInicial(ti);
         setTeclaFinal(tf);
         this.pianos = new ArrayList<>();
-        for (int i = 0; i < 16; i++) {
+        for (int i = 0; i < CANALES; i++) {
             this.pianos.add(new PianoSencillo(ti, tf));
         }
     }
@@ -33,21 +40,17 @@ public class MultiPiano extends Piano {
     @Override
     public void setPosicion(int x, int y) {
         super.setPosicion(x, y);
-        int filas = 8;
-        int columnas = 2;
-        int espacioEntreFilas = 30;
-        int espacioEntreColumnas = 40;
-        
+
         int anchoUnPiano = this.pianos.getFirst().getAnchura();
         int altoUnPiano = this.pianos.getFirst().getAltura();
-        
-        for (int i = 0; i < pianos.size(); i++) {
-            int fila = i / columnas;
-            int columna = i % columnas;
-            
-            int posX = x + columna * (anchoUnPiano + espacioEntreColumnas);
-            int posY = y + fila * (altoUnPiano + espacioEntreFilas);
-            
+
+        for (int i = 0; i < this.pianos.size(); i++) {
+            int fila = i / COLUMNAS;
+            int columna = i % COLUMNAS;
+
+            int posX = x + columna * (anchoUnPiano + ESPACIO_X);
+            int posY = y + fila * (altoUnPiano + ESPACIO_Y);
+
             PianoSencillo piano = this.pianos.get(i);
             piano.setPosicion(posX, posY);
         }
@@ -55,7 +58,8 @@ public class MultiPiano extends Piano {
 
     @Override
     public void setGraphics(Graphics g) {
-        for (PianoSencillo piano : pianos) {
+        super.setGraphics(g);
+        for (PianoSencillo piano : this.pianos) {
             piano.setGraphics(g);
         }
     }
@@ -70,14 +74,12 @@ public class MultiPiano extends Piano {
     @Override
     public int getAnchura() {
         int anchoUnPiano = this.pianos.getFirst().getAnchura();
-        int espacioEntreColumnas = 40;
-        return 2 * anchoUnPiano + espacioEntreColumnas;
+        return COLUMNAS * anchoUnPiano + (COLUMNAS - 1) * ESPACIO_X;
     }
 
     @Override
     public int getAltura() {
         int altoUnPiano = this.pianos.getFirst().getAltura();
-        int espacioEntreFilas = 30;
-        return 8 * altoUnPiano + 7 * espacioEntreFilas;
+        return FILAS * altoUnPiano + (FILAS - 1) * ESPACIO_Y;
     }
 }

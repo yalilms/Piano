@@ -2,6 +2,8 @@ package jd.piano.programa;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class ListaCanciones {
@@ -19,6 +21,7 @@ public class ListaCanciones {
         if (directorio.exists() && directorio.isDirectory()) {
             File[] archivos = directorio.listFiles();
             if (archivos != null) {
+                Arrays.sort(archivos, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
                 for (File archivo : archivos) {
                     if (archivo.isFile() && archivo.getName().toLowerCase().endsWith(".mid")) {
                         canciones.add(archivo.getAbsolutePath());

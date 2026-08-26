@@ -1,6 +1,5 @@
 package jd.piano.teclas;
 
-import javax.swing.text.Position;
 import java.awt.*;
 
 

@@ -1,6 +1,5 @@
 package jd.piano.teclas;
 
-import bpc.daw.consola.CapaCanvas;
 import bpc.daw.consola.Consola;
 import bpc.daw.consola.FondoColorSolido;
 

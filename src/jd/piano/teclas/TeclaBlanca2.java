@@ -29,7 +29,7 @@ public class TeclaBlanca2 extends TeclaBlanca {
     protected int[] getVerticesY() {
         int y = this.posicion.y;
         return new int[] {
-            y,
+            y + TeclaNegra.ALTURA,
             y + TeclaBlanca.ALTURA,
             y + TeclaBlanca.ALTURA,
             y + TeclaNegra.ALTURA,

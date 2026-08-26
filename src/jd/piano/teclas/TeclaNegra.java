@@ -1,9 +1,9 @@
 package jd.piano.teclas;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Shape;
 
-
-public class TeclaNegra extends Tecla{
+public class TeclaNegra extends Tecla {
     public static final int ANCHURA = 15;
     public static final int ALTURA = 50;
 
@@ -27,24 +27,8 @@ public class TeclaNegra extends Tecla{
     }
 
     @Override
-    protected int[] getVerticesX() {
-        int x = this.posicion.x;
-        return new int[] {
-                x,
-                x,
-                x+TeclaNegra.ANCHURA,
-                x+TeclaNegra.ANCHURA
-        };
-    }
-
-    @Override
-    protected int[] getVerticesY() {
-        int y = this.posicion.y;
-        return new int[] {
-                y,
-                y+TeclaNegra.ALTURA,
-                y+TeclaNegra.ALTURA,
-                y
-        };
+    public Shape getForma() {
+        return cuerpoRedondeadoAbajo(this.posicion.x, this.posicion.y,
+                ANCHURA, ALTURA, RADIO);
     }
 }

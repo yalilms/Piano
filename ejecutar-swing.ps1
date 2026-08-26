@@ -1,4 +1,4 @@
-# Compila y lanza la version Swing del piano. No necesita ConsolaDAW.jar.
+# Compila y lanza el piano.
 #   Uso:  .\ejecutar-swing.ps1
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
@@ -16,11 +16,7 @@ if (-not (Get-Command javac -ErrorAction SilentlyContinue)) {
     Write-Host "javac no esta en el PATH, uso el de $($jdk.FullName)"
 }
 
-# Programa.java y ElementoVisualTester.java importan bpc.daw.consola, asi que
-# se quedan fuera de esta compilacion.
-$fuentes = Get-ChildItem -Recurse src -Filter *.java |
-    Where-Object { $_.Name -ne 'Programa.java' -and $_.Name -ne 'ElementoVisualTester.java' } |
-    ForEach-Object { $_.FullName }
+$fuentes = Get-ChildItem -Recurse src -Filter *.java | ForEach-Object { $_.FullName }
 
 # -Encoding ascii a proposito: con utf8 PowerShell mete un BOM que javac rechaza.
 $lista = Join-Path $env:TEMP 'fuentes-piano-swing.txt'

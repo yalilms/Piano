@@ -3,7 +3,7 @@ package jd.piano.programa;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
 
-import java.awt.*;
+import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +31,7 @@ public class MultiPiano extends Piano {
     @Override
     public Tecla getTecla(int canal, int nota) {
         Tecla tecla = null;
-        if (canal >= 0 && canal < pianos.size()) {
+        if (canal >= 0 && canal < this.pianos.size()) {
             tecla = this.pianos.get(canal).getTecla(0, nota);
         }
         return tecla;
@@ -51,23 +51,14 @@ public class MultiPiano extends Piano {
             int posX = x + columna * (anchoUnPiano + ESPACIO_X);
             int posY = y + fila * (altoUnPiano + ESPACIO_Y);
 
-            PianoSencillo piano = this.pianos.get(i);
-            piano.setPosicion(posX, posY);
+            this.pianos.get(i).setPosicion(posX, posY);
         }
     }
 
     @Override
-    public void setGraphics(Graphics g) {
-        super.setGraphics(g);
+    public void dibujar(Graphics2D g) {
         for (PianoSencillo piano : this.pianos) {
-            piano.setGraphics(g);
-        }
-    }
-
-    @Override
-    public void dibujar() {
-        for (PianoSencillo piano : this.pianos) {
-            piano.dibujar();
+            piano.dibujar(g);
         }
     }
 

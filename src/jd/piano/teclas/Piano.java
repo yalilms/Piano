@@ -1,30 +1,23 @@
 package jd.piano.teclas;
 
-import java.awt.*;
+import java.awt.Point;
 
-public abstract class Piano implements ElementoVisual{
+public abstract class Piano implements ElementoVisual {
     private int teclaInicial;
     private int teclaFinal;
     private Point posicion;
-    private Graphics graphics;
 
-    public Piano(){
+    public Piano() {
         this.teclaInicial = 0;
         this.teclaFinal = 0;
         this.posicion = null;
-        this.graphics = null;
     }
-    
+
     @Override
     public void setPosicion(int x, int y) {
         this.posicion = new Point(x, y);
     }
-    
-    @Override
-    public void setGraphics(Graphics g) {
-        this.graphics = g;
-    }
-    
+
     public abstract Tecla getTecla(int canal, int nota);
 
     public int getTeclaInicial() {
@@ -45,9 +38,5 @@ public abstract class Piano implements ElementoVisual{
 
     protected Point getPosicion() {
         return this.posicion;
-    }
-
-    protected Graphics getGraphics() {
-        return this.graphics;
     }
 }

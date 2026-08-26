@@ -1,8 +1,12 @@
 package jd.piano.programa;
 
-import jd.piano.teclas.*;
+import jd.piano.teclas.Piano;
+import jd.piano.teclas.Tecla;
+import jd.piano.teclas.TeclaBlanca;
+import jd.piano.teclas.TeclaFactory;
+import jd.piano.teclas.TeclaNegra;
 
-import java.awt.*;
+import java.awt.Graphics2D;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,11 +14,11 @@ public class PianoSencillo extends Piano {
 
     private Map<Integer, Tecla> teclas;
 
-    public PianoSencillo(int teclaInicial, int teclaFinal){
+    public PianoSencillo(int teclaInicial, int teclaFinal) {
         setTeclaInicial(teclaInicial);
         setTeclaFinal(teclaFinal);
         this.teclas = new HashMap<>();
-        for (int i = teclaInicial; i<=teclaFinal; i++) {
+        for (int i = teclaInicial; i <= teclaFinal; i++) {
             this.teclas.put(i, TeclaFactory.crearTecla(i));
         }
     }
@@ -28,37 +32,35 @@ public class PianoSencillo extends Piano {
     public void setPosicion(int x, int y) {
         super.setPosicion(x, y);
         int x1 = x;
-        int y1 = y;
 
-        for (int i = this.getTeclaInicial(); i <= this.getTeclaFinal(); i++) {
-            Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaBlanca teclaBlanca) {
-                teclaBlanca.setPosicion(x1, y1);
-                x1 += teclaBlanca.getAnchura();
-            }
-            if (tecla instanceof TeclaNegra teclaNegra) {
-                teclaNegra.setPosicion(x1-TeclaNegra.ANCHURA/2, y1);
-            }
-        }
-    }
-
-    @Override
-    public void setGraphics(Graphics g) {
-        super.setGraphics(g);
-        for (Tecla tecla : this.teclas.values()) {
-            tecla.setGraphics(g);
-        }
-    }
-
-    @Override
-    public void dibujar() {
         for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
             Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaBlanca teclaBlanca) {
-                teclaBlanca.dibujar();
+            if (tecla instanceof TeclaBlanca) {
+                tecla.setPosicion(x1, y);
+                x1 += tecla.getAnchura();
+            } else {
+                tecla.setPosicion(x1 - TeclaNegra.ANCHURA / 2, y);
             }
-            if (tecla instanceof TeclaNegra teclaNegra) {
-                teclaNegra.dibujar();
+        }
+    }
+
+    /**
+     * Primero todas las blancas y despues todas las negras, en dos pasadas.
+     * Asi las negras y sus sombras quedan siempre por encima, sin depender del
+     * orden de las notas.
+     */
+    @Override
+    public void dibujar(Graphics2D g) {
+        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
+            Tecla tecla = this.teclas.get(i);
+            if (tecla instanceof TeclaBlanca) {
+                tecla.dibujar(g);
+            }
+        }
+        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
+            Tecla tecla = this.teclas.get(i);
+            if (tecla instanceof TeclaNegra) {
+                tecla.dibujar(g);
             }
         }
     }

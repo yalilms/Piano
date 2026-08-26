@@ -75,18 +75,16 @@ public class ReproductorMidi implements Receiver {
 
                 if (continuar) {
                     if (comando == ShortMessage.NOTE_ON) {
-                        int volumen = sm.getData2();
-                        if (volumen > 0) {
+                        int velocidad = sm.getData2();
+                        if (velocidad > 0) {
                             tecla.setColorPulsado(COLORES[canal]);
-                            tecla.pulsar();
+                            tecla.pulsar(velocidad);
                         } else {
                             tecla.soltar();
                         }
                     } else if (comando == ShortMessage.NOTE_OFF) {
                         tecla.soltar();
                     }
-
-                    tecla.dibujar();
                 }
             }
         }

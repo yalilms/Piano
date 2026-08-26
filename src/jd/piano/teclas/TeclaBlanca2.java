@@ -1,7 +1,6 @@
 package jd.piano.teclas;
 
-import java.awt.*;
-
+/** Re, Sol y La: tienen negra a los dos lados. */
 public class TeclaBlanca2 extends TeclaBlanca {
 
     public TeclaBlanca2(int n) {
@@ -9,34 +8,12 @@ public class TeclaBlanca2 extends TeclaBlanca {
     }
 
     @Override
-    protected int[] getVerticesX() {
-        int x = this.posicion.x;
-        final int N = TeclaNegra.ANCHURA;
-        final int B = TeclaBlanca.ANCHURA;
-        return new int[] {
-            x,
-            x,
-            x + B,
-            x + B,
-            x + B - N/2,
-            x + B - N/2,
-            x + N/2,
-            x + N/2
-        };
+    protected boolean tieneMuescaIzquierda() {
+        return true;
     }
 
     @Override
-    protected int[] getVerticesY() {
-        int y = this.posicion.y;
-        return new int[] {
-            y + TeclaNegra.ALTURA,
-            y + TeclaBlanca.ALTURA,
-            y + TeclaBlanca.ALTURA,
-            y + TeclaNegra.ALTURA,
-            y + TeclaNegra.ALTURA,
-            y,
-            y,
-            y + TeclaNegra.ALTURA
-        };
+    protected boolean tieneMuescaDerecha() {
+        return true;
     }
 }

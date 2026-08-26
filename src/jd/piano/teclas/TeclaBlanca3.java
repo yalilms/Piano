@@ -1,7 +1,6 @@
 package jd.piano.teclas;
 
-import java.awt.*;
-
+/** Mi y Si: solo tienen negra a la izquierda. */
 public class TeclaBlanca3 extends TeclaBlanca {
 
     public TeclaBlanca3(int n) {
@@ -9,30 +8,12 @@ public class TeclaBlanca3 extends TeclaBlanca {
     }
 
     @Override
-    protected int[] getVerticesX() {
-        int x = this.posicion.x;
-        final int N = TeclaNegra.ANCHURA;
-        final int B = TeclaBlanca.ANCHURA;
-        return new int[] {
-            x,
-            x,
-            x + B,
-            x + B,
-            x + N/2,
-            x + N/2
-        };
+    protected boolean tieneMuescaIzquierda() {
+        return true;
     }
 
     @Override
-    protected int[] getVerticesY() {
-        int y = this.posicion.y;
-        return new int[] {
-            y + TeclaNegra.ALTURA,
-            y + TeclaBlanca.ALTURA,
-            y + TeclaBlanca.ALTURA,
-            y,
-            y,
-            y + TeclaNegra.ALTURA
-        };
+    protected boolean tieneMuescaDerecha() {
+        return false;
     }
 }

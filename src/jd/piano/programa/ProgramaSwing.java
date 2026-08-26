@@ -12,9 +12,8 @@ import java.util.List;
 import java.util.Scanner;
 
 /**
- * Arranque alternativo que no necesita ConsolaDAW: el menu va por la terminal
- * y el piano se dibuja en una ventana Swing (ver Lienzo).
- * El programa original con ConsolaDAW sigue estando en Programa.
+ * Arranque del programa: el menu va por la terminal y el piano se dibuja en
+ * una ventana Swing.
  *
  * Los mensajes van sin acentos a proposito, porque la consola de Windows no
  * usa UTF-8 por defecto y saldrian caracteres raros.
@@ -65,13 +64,13 @@ public class ProgramaSwing {
             return;
         }
 
-        Lienzo lienzo = crearLienzo(piano, new File(rutaCancion).getName());
-        cargarFondo(lienzo);
+        Escena escena = crearEscena(piano);
+        cargarFondo(escena);
+        escena.setPiano(piano);
+        piano.setPosicion((escena.getAnchura() - piano.getAnchura()) / 2,
+                (escena.getAltura() - piano.getAltura()) / 2);
 
-        piano.setPosicion((lienzo.getAnchura() - piano.getAnchura()) / 2,
-                (lienzo.getAltura() - piano.getAltura()) / 2);
-        piano.setGraphics(lienzo.getGraphics());
-        piano.dibujar();
+        Lienzo lienzo = new Lienzo("Piano MIDI - " + new File(rutaCancion).getName(), escena);
         lienzo.mostrar();
 
         System.out.println("Sonando... cierra la ventana para salir.");
@@ -94,15 +93,15 @@ public class ProgramaSwing {
         return piano;
     }
 
-    /** La ventana se ajusta al piano, sin pasarse del tamano de la pantalla. */
-    private static Lienzo crearLienzo(Piano piano, String nombreCancion) {
+    /** La escena se ajusta al piano, sin pasarse del tamano de la pantalla. */
+    private static Escena crearEscena(Piano piano) {
         Dimension pantalla = Toolkit.getDefaultToolkit().getScreenSize();
         int ancho = Math.min(piano.getAnchura() + 2 * MARGEN, pantalla.width);
         int alto = Math.min(piano.getAltura() + 2 * MARGEN, pantalla.height - 80);
-        return new Lienzo("Piano MIDI - " + nombreCancion, ancho, alto);
+        return new Escena(ancho, alto);
     }
 
-    private static void cargarFondo(Lienzo lienzo) {
+    private static void cargarFondo(Escena escena) {
         File file = new File("madera.jpg");
         if (!file.exists()) {
             System.out.println("Aviso: no encuentro madera.jpg, fondo liso.");
@@ -110,7 +109,7 @@ public class ProgramaSwing {
         }
         try {
             Image imagen = ImageIO.read(file);
-            lienzo.setFondo(imagen);
+            escena.setFondo(imagen);
         } catch (IOException error) {
             System.out.println("Aviso: no puedo leer madera.jpg (" + error.getMessage() + ")");
         }

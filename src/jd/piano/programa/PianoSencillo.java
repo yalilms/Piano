@@ -1,11 +1,11 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
+import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
 import jd.piano.teclas.TeclaBlanca;
 import jd.piano.teclas.TeclaFactory;
-import jd.piano.teclas.TeclaNegra;
 
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
@@ -17,20 +17,43 @@ import java.util.Map;
 
 public class PianoSencillo extends Piano {
 
-    private Map<Integer, Tecla> teclas;
+    private final Map<Integer, Tecla> teclas;
+    private MedidasTeclado medidas;
 
     public PianoSencillo(int teclaInicial, int teclaFinal) {
+        this(teclaInicial, teclaFinal, MedidasTeclado.NORMAL);
+    }
+
+    public PianoSencillo(int teclaInicial, int teclaFinal, MedidasTeclado medidas) {
+        this.medidas = medidas;
         setTeclaInicial(teclaInicial);
         setTeclaFinal(teclaFinal);
         this.teclas = new HashMap<>();
         for (int i = teclaInicial; i <= teclaFinal; i++) {
-            this.teclas.put(i, TeclaFactory.crearTecla(i));
+            this.teclas.put(i, TeclaFactory.crearTecla(i, medidas));
         }
     }
 
     @Override
     public Tecla getTecla(int canal, int nota) {
         return this.teclas.get(nota);
+    }
+
+    @Override
+    public MedidasTeclado getMedidas() {
+        return this.medidas;
+    }
+
+    @Override
+    public void setMedidas(MedidasTeclado medidas) {
+        this.medidas = medidas;
+        for (Tecla tecla : this.teclas.values()) {
+            tecla.setMedidas(medidas);
+        }
+        // Las posiciones dependen del ancho de tecla, hay que recolocarlas
+        if (getPosicion() != null) {
+            setPosicion(getPosicion().x, getPosicion().y);
+        }
     }
 
     @Override
@@ -44,7 +67,7 @@ public class PianoSencillo extends Piano {
                 tecla.setPosicion(x1, y);
                 x1 += tecla.getAnchura();
             } else {
-                tecla.setPosicion(x1 - TeclaNegra.ANCHURA / 2, y);
+                tecla.setPosicion(x1 - this.medidas.getDesplazamientoNegra(), y);
             }
         }
     }
@@ -60,19 +83,30 @@ public class PianoSencillo extends Piano {
      */
     @Override
     public void dibujar(Graphics2D g) {
+        recorrerTeclas(g, false);
+    }
+
+    @Override
+    public void dibujarEnReposo(Graphics2D g) {
+        recorrerTeclas(g, true);
+    }
+
+    private void recorrerTeclas(Graphics2D g, boolean enReposo) {
         Rectangle recorte = g.getClipBounds();
         dibujarFieltro(g);
 
-        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
-            Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaBlanca && visible(tecla, recorte)) {
-                tecla.dibujar(g);
-            }
-        }
-        for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
-            Tecla tecla = this.teclas.get(i);
-            if (tecla instanceof TeclaNegra && visible(tecla, recorte)) {
-                tecla.dibujar(g);
+        for (int pasada = 0; pasada < 2; pasada++) {
+            boolean tocanBlancas = (pasada == 0);
+            for (int i = getTeclaInicial(); i <= getTeclaFinal(); i++) {
+                Tecla tecla = this.teclas.get(i);
+                boolean esBlanca = (tecla instanceof TeclaBlanca);
+                if (esBlanca == tocanBlancas && visible(tecla, recorte)) {
+                    if (enReposo) {
+                        tecla.dibujarEnReposo(g);
+                    } else {
+                        tecla.dibujar(g);
+                    }
+                }
             }
         }
     }
@@ -103,27 +137,23 @@ public class PianoSencillo extends Piano {
         if (getPosicion() == null) {
             return;
         }
+        int altoFieltro = this.medidas.getAlturaFieltro();
         double x = getPosicion().x;
-        double y = getPosicion().y - Estilo.FIELTRO_ALTURA;
+        double y = getPosicion().y - altoFieltro;
         g.setPaint(new GradientPaint(
                 0f, (float) y, Estilo.FIELTRO_BAJO,
-                0f, (float) (y + Estilo.FIELTRO_ALTURA), Estilo.FIELTRO_ALTO));
-        g.fill(new Rectangle2D.Double(x, y, getAnchura(), Estilo.FIELTRO_ALTURA));
+                0f, (float) (y + altoFieltro), Estilo.FIELTRO_ALTO));
+        g.fill(new Rectangle2D.Double(x, y, getAnchura(), altoFieltro));
     }
 
     @Override
     public int getAnchura() {
-        int contadorBlancas = 0;
-        for (Tecla tecla : this.teclas.values()) {
-            if (tecla instanceof TeclaBlanca) {
-                contadorBlancas++;
-            }
-        }
-        return contadorBlancas * TeclaBlanca.ANCHURA;
+        return this.medidas.anchuraDe(
+                contarBlancas(getTeclaInicial(), getTeclaFinal()));
     }
 
     @Override
     public int getAltura() {
-        return TeclaBlanca.ALTURA;
+        return this.medidas.getAlturaBlanca();
     }
 }

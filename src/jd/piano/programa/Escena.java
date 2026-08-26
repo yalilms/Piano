@@ -37,9 +37,16 @@ public class Escena {
     private static final int ALTO_TAPA = 34;
     private static final float OPACIDAD_REFLEJO = 0.28f;
 
-    private final int ancho;
-    private final int alto;
+    /** Mas trozos de estos y sale mas barato juntarlos en rectangulos mayores. */
+    private static final int MAXIMO_REGIONES = 14;
+
+    /** A partir de esta fraccion de la escena cubierta, se repinta todo. */
+    private static final double FRACCION_COLAPSO = 0.45;
+
+    private int ancho;
+    private int alto;
     private BufferedImage fondo;
+    private Image fondoOriginal;
     private Piano piano;
 
     /** Fondo, tapa y reflejo, sin teclas. Sirve para borrar la region sucia. */
@@ -55,6 +62,7 @@ public class Escena {
         this.ancho = ancho;
         this.alto = alto;
         this.fondo = null;
+        this.fondoOriginal = null;
         this.piano = null;
         this.escenarioSinTeclas = null;
         this.escenarioCompleto = null;
@@ -70,6 +78,7 @@ public class Escena {
         g.drawImage(imagen, 0, 0, this.ancho, this.alto, null);
         g.dispose();
         this.fondo = escalado;
+        this.fondoOriginal = imagen;
         invalidarCaches();
     }
 
@@ -83,6 +92,25 @@ public class Escena {
     }
 
     /**
+     * Cambia el tamano de la escena y rehace todo lo cacheado. Devuelve true
+     * si el tamano ha cambiado de verdad, para no recomponer de balde en cada
+     * evento de redimensionado que manda Swing.
+     */
+    public boolean redimensionar(int ancho, int alto) {
+        boolean cambia = ancho > 0 && alto > 0
+                && (ancho != this.ancho || alto != this.alto);
+        if (cambia) {
+            this.ancho = ancho;
+            this.alto = alto;
+            invalidarCaches();
+            if (this.fondoOriginal != null) {
+                setFondo(this.fondoOriginal);
+            }
+        }
+        return cambia;
+    }
+
+    /**
      * Fuerza a recomponer las imagenes cacheadas. Hay que llamarlo si se mueve
      * el piano o cambia el fondo.
      */
@@ -93,9 +121,9 @@ public class Escena {
     }
 
     /**
-     * Compone las imagenes cacheadas. Conviene llamarlo con el piano ya
-     * colocado y antes de que empiece a sonar nada, porque las teclas se
-     * hornean en reposo.
+     * Compone las imagenes cacheadas. Se puede llamar en cualquier momento:
+     * las teclas se hornean con dibujarEnReposo, asi que salen apagadas aunque
+     * la cancion ya este sonando.
      */
     public void prepararCaches() {
         this.vineta = crearVineta();
@@ -118,6 +146,10 @@ public class Escena {
         if (capaReposo != null) {
             g2.drawImage(capaReposo, 0, 0, null);
         }
+        // La vineta va horneada aqui para no tener que volcar una imagen ARGB
+        // a pantalla completa en cada frame; sobre las zonas que se repintan se
+        // vuelve a aplicar, pero solo en ese trozo.
+        g2.drawImage(this.vineta, 0, 0, null);
         g2.dispose();
     }
 
@@ -131,23 +163,97 @@ public class Escena {
         if (this.piano != null) {
             this.sucias.clear();
             this.piano.anadirRegionesActivas(this.sucias);
+            recortarALaEscena(this.sucias);
             fusionar(this.sucias);
+            limitar(this.sucias, MAXIMO_REGIONES);
+            colapsarSiCubreCasiTodo(this.sucias);
 
             Shape clipAnterior = g.getClip();
             for (Rectangle sucia : this.sucias) {
                 g.setClip(sucia);
                 // Se restaura el escenario sin teclas para no acumular sombras
-                // semitransparentes al volver a pintarlas encima.
-                g.drawImage(this.escenarioSinTeclas, 0, 0, null);
+                // semitransparentes al volver a pintarlas encima. Se copia solo
+                // el trozo: volcar la imagen entera en cada region sale caro.
+                volcarTrozo(g, this.escenarioSinTeclas, sucia);
                 this.piano.dibujar(g);
+                volcarTrozo(g, this.vineta, sucia);
             }
             g.setClip(clipAnterior);
 
             // Los brillos van sin recortar: la luz se derrama lejos de la tecla
             this.piano.dibujarBrillos(g);
         }
+    }
 
-        g.drawImage(this.vineta, 0, 0, null);
+    /**
+     * Junta regiones hasta bajar del maximo, eligiendo cada vez el par cuya
+     * union desperdicia menos area. Con muchas teclas sonando a la vez salen
+     * decenas de trozos, y cada uno cuesta un setClip y dos volcados: a partir
+     * de cierto punto sale mas barato repintar rectangulos mas grandes.
+     */
+    private static void limitar(List<Rectangle> regiones, int maximo) {
+        while (regiones.size() > maximo) {
+            int mejorI = 0;
+            int mejorJ = 1;
+            long mejorCoste = Long.MAX_VALUE;
+            for (int i = 0; i < regiones.size(); i++) {
+                for (int j = i + 1; j < regiones.size(); j++) {
+                    Rectangle union = regiones.get(i).union(regiones.get(j));
+                    long coste = (long) union.width * union.height
+                            - area(regiones.get(i)) - area(regiones.get(j));
+                    if (coste < mejorCoste) {
+                        mejorCoste = coste;
+                        mejorI = i;
+                        mejorJ = j;
+                    }
+                }
+            }
+            regiones.get(mejorI).add(regiones.get(mejorJ));
+            regiones.remove(mejorJ);
+        }
+    }
+
+    private static long area(Rectangle r) {
+        return (long) r.width * r.height;
+    }
+
+    /**
+     * Si entre todos los trozos ya cubren casi la escena, sale mas barato un
+     * unico repintado completo que catorce grandes que se pisan. Sin esto, con
+     * muchisimas teclas sonando a la vez el coste subia en vez de bajar.
+     */
+    private void colapsarSiCubreCasiTodo(List<Rectangle> regiones) {
+        if (regiones.size() <= 1) {
+            return;
+        }
+        long total = 0;
+        for (Rectangle r : regiones) {
+            total += area(r);
+        }
+        if (total > (long) this.ancho * this.alto * FRACCION_COLAPSO) {
+            regiones.clear();
+            regiones.add(new Rectangle(0, 0, this.ancho, this.alto));
+        }
+    }
+
+    /** Copia solo el rectangulo indicado, no la imagen completa. */
+    private static void volcarTrozo(Graphics2D g, BufferedImage img, Rectangle r) {
+        g.drawImage(img,
+                r.x, r.y, r.x + r.width, r.y + r.height,
+                r.x, r.y, r.x + r.width, r.y + r.height, null);
+    }
+
+    /** Deja las regiones dentro de la escena y descarta las que se salen. */
+    private void recortarALaEscena(List<Rectangle> regiones) {
+        Rectangle limite = new Rectangle(0, 0, this.ancho, this.alto);
+        for (int i = regiones.size() - 1; i >= 0; i--) {
+            Rectangle recortada = regiones.get(i).intersection(limite);
+            if (recortada.isEmpty()) {
+                regiones.remove(i);
+            } else {
+                regiones.set(i, recortada);
+            }
+        }
     }
 
     /**
@@ -178,7 +284,7 @@ public class Escena {
                     BufferedImage.TYPE_INT_ARGB_PRE);
             Graphics2D g = capa.createGraphics();
             aplicarCalidad(g);
-            this.piano.dibujar(g);
+            this.piano.dibujarEnReposo(g);
             g.dispose();
         }
         return capa;

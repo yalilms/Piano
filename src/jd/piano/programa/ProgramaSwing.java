@@ -1,5 +1,7 @@
 package jd.piano.programa;
 
+import jd.piano.teclas.LayoutTeclados;
+import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
 
 import javax.imageio.ImageIO;
@@ -23,10 +25,7 @@ public class ProgramaSwing {
     private static final int NOTA_INICIAL = 24;
     private static final int NOTA_FINAL = 108;
 
-    private static final int NOTA_INICIAL_MULTI = 48;
-    private static final int NOTA_FINAL_MULTI = 71;
-
-    private static final int MARGEN = 40;
+    private static final int MARGEN = 56;
 
     public static void main(String[] args) {
         ListaCanciones lista = new ListaCanciones("canciones");
@@ -54,54 +53,76 @@ public class ProgramaSwing {
         String rutaCancion = lista.getCancion(seleccion - 1);
 
         System.out.println("  1) Piano Sencillo");
-        System.out.println("  2) Multi Piano (16 canales)");
+        System.out.println("  2) Multi Piano (un teclado por canal)");
         System.out.print("Modo: ");
         int opcion = leerEntero(teclado);
 
-        Piano piano = crearPiano(opcion);
-        if (piano == null) {
+        if (opcion != 1 && opcion != 2) {
             System.out.println("Opcion no valida");
             return;
         }
 
-        Escena escena = crearEscena(piano);
-        cargarFondo(escena);
+        try {
+            arrancar(rutaCancion, opcion == 2);
+        } catch (Exception error) {
+            System.out.println("Error: " + error.getMessage());
+        }
+    }
+
+    private static void arrancar(String rutaCancion, boolean multi) throws Exception {
+        Dimension pantalla = Toolkit.getDefaultToolkit().getScreenSize();
+        int anchoVentana = (int) (pantalla.width * 0.9);
+        int altoVentana = (int) (pantalla.height * 0.75);
+
+        AnalisisMidi analisis = AnalisisMidi.de(rutaCancion);
+        Escena escena = new Escena(anchoVentana, altoVentana);
+        Piano piano;
+
+        if (multi) {
+            List<Integer> canales = analisis.getCanalesUsados();
+            System.out.println("La cancion usa " + canales.size() + " canales, notas "
+                    + analisis.getNotaMinima() + " a " + analisis.getNotaMaxima());
+            piano = new MultiPiano(canales, NOTA_INICIAL, NOTA_FINAL,
+                    layoutPara(canales.size(), anchoVentana, altoVentana));
+        } else {
+            piano = new PianoSencillo(NOTA_INICIAL, NOTA_FINAL, MedidasTeclado.NORMAL);
+        }
+
         escena.setPiano(piano);
-        piano.setPosicion((escena.getAnchura() - piano.getAnchura()) / 2,
-                (escena.getAltura() - piano.getAltura()) / 2);
-        // Con el piano ya colocado y antes de que suene nada: las teclas se
-        // hornean en reposo dentro de la imagen cacheada.
-        escena.prepararCaches();
+        cargarFondo(escena);
+        colocar(escena, piano, multi);
 
         Lienzo lienzo = new Lienzo("Piano MIDI - " + new File(rutaCancion).getName(), escena);
+        lienzo.setAlRedimensionar(() -> colocar(escena, escena.getPiano(), multi));
         lienzo.mostrar();
 
         System.out.println("Sonando... cierra la ventana para salir.");
-        try {
-            ReproductorMidi reproductor = new ReproductorMidi();
-            reproductor.conectar(piano);
-            reproductor.reproducir(rutaCancion);
-        } catch (Exception error) {
-            System.out.println("Error reproduciendo el MIDI: " + error.getMessage());
-        }
+        ReproductorMidi reproductor = new ReproductorMidi();
+        reproductor.conectar(piano);
+        reproductor.reproducir(rutaCancion);
     }
 
-    private static Piano crearPiano(int opcion) {
-        Piano piano = null;
-        if (opcion == 1) {
-            piano = new PianoSencillo(NOTA_INICIAL, NOTA_FINAL);
-        } else if (opcion == 2) {
-            piano = new MultiPiano(NOTA_INICIAL_MULTI, NOTA_FINAL_MULTI);
-        }
-        return piano;
+    private static LayoutTeclados layoutPara(int cuantosCanales, int ancho, int alto) {
+        return LayoutTeclados.calcular(cuantosCanales,
+                Piano.contarBlancas(NOTA_INICIAL, NOTA_FINAL),
+                ancho - 2 * MARGEN, alto - 2 * MARGEN);
     }
 
-    /** La escena se ajusta al piano, sin pasarse del tamano de la pantalla. */
-    private static Escena crearEscena(Piano piano) {
-        Dimension pantalla = Toolkit.getDefaultToolkit().getScreenSize();
-        int ancho = Math.min(piano.getAnchura() + 2 * MARGEN, pantalla.width);
-        int alto = Math.min(piano.getAltura() + 2 * MARGEN, pantalla.height - 80);
-        return new Escena(ancho, alto);
+    /**
+     * Recalcula escala y posicion para el tamano actual de la escena. Se llama
+     * al arrancar y cada vez que se redimensiona la ventana.
+     */
+    private static void colocar(Escena escena, Piano piano, boolean multi) {
+        if (piano == null) {
+            return;
+        }
+        if (multi && piano instanceof MultiPiano mp) {
+            mp.setLayout(layoutPara(mp.getCanales().size(),
+                    escena.getAnchura(), escena.getAltura()));
+        }
+        piano.setPosicion((escena.getAnchura() - piano.getAnchura()) / 2,
+                (escena.getAltura() - piano.getAltura()) / 2);
+        escena.prepararCaches();
     }
 
     private static void cargarFondo(Escena escena) {

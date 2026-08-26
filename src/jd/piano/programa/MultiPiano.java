@@ -1,6 +1,7 @@
 package jd.piano.programa;
 
-import jd.piano.teclas.Estilo;
+import jd.piano.teclas.LayoutTeclados;
+import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
 
@@ -9,51 +10,94 @@ import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Un teclado por canal MIDI. Solo se montan los canales que la cancion usa de
+ * verdad: medido sobre las canciones del proyecto, van de 2 a 14 y nunca 16,
+ * asi que dibujar siempre los dieciseis desperdiciaba espacio y obligaba a
+ * recortar el rango de notas.
+ */
 public class MultiPiano extends Piano {
 
-    public static final int CANALES = 16;
+    public static final int CANALES_MIDI = 16;
 
-    // FILAS * COLUMNAS debe valer CANALES
-    private static final int FILAS = 4;
-    private static final int COLUMNAS = 4;
-    private static final int ESPACIO_X = 10;
-    private static final int ESPACIO_Y = 20;
+    /** Canal MIDI de cada teclado, en orden de dibujado. */
+    private final List<Integer> canales;
+    /** Indice del teclado de cada canal, o -1 si ese canal no se dibuja. */
+    private final int[] indicePorCanal;
+    private final List<PianoSencillo> pianos;
 
-    private List<PianoSencillo> pianos;
+    private LayoutTeclados layout;
 
-    public MultiPiano(int ti, int tf) {
+    public MultiPiano(List<Integer> canales, int ti, int tf, LayoutTeclados layout) {
         setTeclaInicial(ti);
         setTeclaFinal(tf);
-        this.pianos = new ArrayList<>();
-        for (int i = 0; i < CANALES; i++) {
-            this.pianos.add(new PianoSencillo(ti, tf));
+        this.canales = new ArrayList<>(canales);
+        this.layout = layout;
+        this.indicePorCanal = new int[CANALES_MIDI];
+        for (int c = 0; c < CANALES_MIDI; c++) {
+            this.indicePorCanal[c] = -1;
         }
+        this.pianos = new ArrayList<>();
+        for (int i = 0; i < this.canales.size(); i++) {
+            int canal = this.canales.get(i);
+            if (canal >= 0 && canal < CANALES_MIDI) {
+                this.indicePorCanal[canal] = i;
+            }
+            this.pianos.add(new PianoSencillo(ti, tf, layout.getMedidas()));
+        }
+    }
+
+    public List<Integer> getCanales() {
+        return new ArrayList<>(this.canales);
     }
 
     @Override
     public Tecla getTecla(int canal, int nota) {
         Tecla tecla = null;
-        if (canal >= 0 && canal < this.pianos.size()) {
-            tecla = this.pianos.get(canal).getTecla(0, nota);
+        if (canal >= 0 && canal < CANALES_MIDI) {
+            int indice = this.indicePorCanal[canal];
+            if (indice >= 0) {
+                tecla = this.pianos.get(indice).getTecla(0, nota);
+            }
         }
         return tecla;
+    }
+
+    @Override
+    public MedidasTeclado getMedidas() {
+        return this.layout.getMedidas();
+    }
+
+    @Override
+    public void setMedidas(MedidasTeclado medidas) {
+        for (PianoSencillo piano : this.pianos) {
+            piano.setMedidas(medidas);
+        }
+        if (getPosicion() != null) {
+            setPosicion(getPosicion().x, getPosicion().y);
+        }
+    }
+
+    /** Cambia la rejilla y la escala de golpe, por ejemplo al redimensionar. */
+    public void setLayout(LayoutTeclados layout) {
+        this.layout = layout;
+        setMedidas(layout.getMedidas());
     }
 
     @Override
     public void setPosicion(int x, int y) {
         super.setPosicion(x, y);
 
-        int anchoUnPiano = this.pianos.getFirst().getAnchura();
-        int altoUnPiano = this.pianos.getFirst().getAltura();
+        int anchoUno = anchuraDeUnTeclado();
+        int altoUno = this.layout.getMedidas().getAlturaBlanca();
+        int columnas = this.layout.getColumnas();
 
         for (int i = 0; i < this.pianos.size(); i++) {
-            int fila = i / COLUMNAS;
-            int columna = i % COLUMNAS;
-
-            int posX = x + columna * (anchoUnPiano + ESPACIO_X);
-            int posY = y + fila * (altoUnPiano + ESPACIO_Y);
-
-            this.pianos.get(i).setPosicion(posX, posY);
+            int fila = i / columnas;
+            int columna = i % columnas;
+            this.pianos.get(i).setPosicion(
+                    x + columna * (anchoUno + this.layout.getEspacioX()),
+                    y + fila * (altoUno + this.layout.getEspacioY()));
         }
     }
 
@@ -71,16 +115,14 @@ public class MultiPiano extends Piano {
         }
     }
 
-    private static boolean tocaElRecorte(PianoSencillo piano, Rectangle recorte) {
-        Rectangle limites = piano.getLimites();
-        boolean toca = limites == null;
-        if (limites != null) {
-            Rectangle holgado = new Rectangle(limites);
-            holgado.grow(Tecla.MARGEN_REPINTADO + Estilo.FIELTRO_ALTURA,
-                    Tecla.MARGEN_REPINTADO + Estilo.FIELTRO_ALTURA);
-            toca = holgado.intersects(recorte);
+    @Override
+    public void dibujarEnReposo(Graphics2D g) {
+        Rectangle recorte = g.getClipBounds();
+        for (PianoSencillo piano : this.pianos) {
+            if (recorte == null || tocaElRecorte(piano, recorte)) {
+                piano.dibujarEnReposo(g);
+            }
         }
-        return toca;
     }
 
     @Override
@@ -97,15 +139,35 @@ public class MultiPiano extends Piano {
         }
     }
 
+    private boolean tocaElRecorte(PianoSencillo piano, Rectangle recorte) {
+        Rectangle limites = piano.getLimites();
+        boolean toca = true;
+        if (limites != null) {
+            Rectangle holgado = new Rectangle(limites);
+            int holgura = Tecla.MARGEN_REPINTADO
+                    + this.layout.getMedidas().getAlturaFieltro();
+            holgado.grow(holgura, holgura);
+            toca = holgado.intersects(recorte);
+        }
+        return toca;
+    }
+
+    private int anchuraDeUnTeclado() {
+        return this.layout.getMedidas().anchuraDe(
+                contarBlancas(getTeclaInicial(), getTeclaFinal()));
+    }
+
     @Override
     public int getAnchura() {
-        int anchoUnPiano = this.pianos.getFirst().getAnchura();
-        return COLUMNAS * anchoUnPiano + (COLUMNAS - 1) * ESPACIO_X;
+        int columnas = this.layout.getColumnas();
+        return columnas * anchuraDeUnTeclado()
+                + (columnas - 1) * this.layout.getEspacioX();
     }
 
     @Override
     public int getAltura() {
-        int altoUnPiano = this.pianos.getFirst().getAltura();
-        return FILAS * altoUnPiano + (FILAS - 1) * ESPACIO_Y;
+        int filas = this.layout.getFilas();
+        return filas * this.layout.getMedidas().getAlturaBlanca()
+                + (filas - 1) * this.layout.getEspacioY();
     }
 }

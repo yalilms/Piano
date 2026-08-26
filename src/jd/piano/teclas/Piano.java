@@ -24,6 +24,22 @@ public abstract class Piano implements ElementoVisual {
     public abstract Tecla getTecla(int canal, int nota);
 
     /**
+     * Cambia el tamano de las teclas conservando su estado y su identidad.
+     * Importante que no se reconstruyan: el reproductor MIDI guarda referencias
+     * a las teclas y recrearlas las dejaria colgadas.
+     */
+    public abstract void setMedidas(MedidasTeclado medidas);
+
+    public abstract MedidasTeclado getMedidas();
+
+    /**
+     * Dibuja el teclado apagado, ignorando que teclas estan pulsadas.
+     * La Escena lo usa para hornear su imagen cacheada, y necesita que salga
+     * en reposo aunque la cancion ya este sonando.
+     */
+    public abstract void dibujarEnReposo(Graphics2D g);
+
+    /**
      * Los resplandores de las teclas pulsadas, en una pasada aparte.
      * La Escena los pinta sin recortar, porque la luz se derrama mucho mas
      * alla de la tecla y no debe quedarse dentro de la region repintada.
@@ -72,5 +88,17 @@ public abstract class Piano implements ElementoVisual {
                     getAnchura(), getAltura());
         }
         return limites;
+    }
+
+    /** Cuantas teclas blancas hay en un rango de notas MIDI. */
+    public static int contarBlancas(int notaInicial, int notaFinal) {
+        int blancas = 0;
+        for (int n = notaInicial; n <= notaFinal; n++) {
+            int resto = ((n % 12) + 12) % 12;
+            if (resto != 1 && resto != 3 && resto != 6 && resto != 8 && resto != 10) {
+                blancas++;
+            }
+        }
+        return blancas;
     }
 }

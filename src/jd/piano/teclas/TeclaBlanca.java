@@ -2,22 +2,20 @@ package jd.piano.teclas;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.LinearGradientPaint;
 import java.awt.Graphics2D;
+import java.awt.LinearGradientPaint;
 import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 
 public abstract class TeclaBlanca extends Tecla {
-    public static final int ANCHURA = 25;
-    public static final int ALTURA = 100;
 
-    /** Alto del canto frontal iluminado, en pixeles. */
-    private static final int CANTO = 9;
+    /** Proporcion del alto que ocupa el canto frontal iluminado. */
+    private static final double CANTO = 0.09;
 
-    TeclaBlanca(int n) {
-        super(n);
+    TeclaBlanca(int n, MedidasTeclado medidas) {
+        super(n, medidas);
     }
 
     @Override
@@ -27,19 +25,18 @@ public abstract class TeclaBlanca extends Tecla {
 
     @Override
     public int getAnchura() {
-        return TeclaBlanca.ANCHURA;
+        return this.medidas.getAnchuraBlanca();
     }
 
     @Override
     public int getAltura() {
-        return TeclaBlanca.ALTURA;
+        return this.medidas.getAlturaBlanca();
     }
 
     @Override
-    public void dibujar(Graphics2D g) {
+    protected void dibujar(Graphics2D g, double intensidad) {
         Shape forma = getFormaDibujo();
         Rectangle2D caja = forma.getBounds2D();
-        double intensidad = getIntensidad();
 
         Color arriba = Estilo.MARFIL_ALTO;
         Color abajo = Estilo.MARFIL_BAJO;
@@ -57,7 +54,7 @@ public abstract class TeclaBlanca extends Tecla {
         float y1 = (float) caja.getMaxY();
         g.setPaint(new LinearGradientPaint(
                 new Point2D.Float(0, y0), new Point2D.Float(0, y1),
-                new float[]{0f, 1f - (float) CANTO / (float) caja.getHeight(), 1f},
+                new float[]{0f, 1f - (float) CANTO, 1f},
                 new Color[]{arriba, abajo, Estilo.MARFIL_CANTO}));
         g.fill(forma);
 
@@ -75,21 +72,20 @@ public abstract class TeclaBlanca extends Tecla {
     protected Shape construirForma() {
         double x = this.posicion.x;
         double y = this.posicion.y;
-        Area forma = cuerpoRedondeadoAbajo(x, y, ANCHURA, ALTURA, RADIO);
-
-        // La negra se coloca en (x de la blanca siguiente - ANCHURA/2), asi que
-        // con ANCHURA impar invade 8 px por la izquierda y 7 por la derecha.
-        // Usando esos anchos el encaje es exacto y no queda costura.
-        double invadeIzquierda = TeclaNegra.ANCHURA - TeclaNegra.ANCHURA / 2;
-        double invadeDerecha = TeclaNegra.ANCHURA / 2;
+        int ancho = this.medidas.getAnchuraBlanca();
+        int alto = this.medidas.getAlturaBlanca();
+        int altoNegra = this.medidas.getAlturaNegra();
+        Area forma = cuerpoRedondeadoAbajo(x, y, ancho, alto,
+                this.medidas.getRadioEsquina());
 
         if (tieneMuescaIzquierda()) {
             forma.subtract(new Area(new Rectangle2D.Double(
-                    x, y, invadeIzquierda, TeclaNegra.ALTURA)));
+                    x, y, this.medidas.getInvasionIzquierda(), altoNegra)));
         }
         if (tieneMuescaDerecha()) {
+            int invade = this.medidas.getInvasionDerecha();
             forma.subtract(new Area(new Rectangle2D.Double(
-                    x + ANCHURA - invadeDerecha, y, invadeDerecha, TeclaNegra.ALTURA)));
+                    x + ancho - invade, y, invade, altoNegra)));
         }
         return forma;
     }

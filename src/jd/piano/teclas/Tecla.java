@@ -5,8 +5,8 @@ import java.awt.Color;
 import java.awt.Composite;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.RadialGradientPaint;
+import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Area;
@@ -20,15 +20,13 @@ import java.util.Map;
 
 public abstract class Tecla implements Pulsable {
 
-    /** Radio de las esquinas de abajo. Las de arriba se quedan rectas. */
-    protected static final double RADIO = 3;
-
     private static final Color COLOR_PULSADO_POR_DEFECTO = new Color(255, 170, 60);
 
     /** Holgura al repintar, para que entren el hundimiento y las sombras. */
     public static final int MARGEN_REPINTADO = 6;
 
     protected Point posicion;
+    protected MedidasTeclado medidas;
     private final int nota;
     private boolean pulsada;
     private int velocidad;
@@ -37,13 +35,16 @@ public abstract class Tecla implements Pulsable {
 
     /**
      * Construir la forma cuesta (son operaciones de Area), y a 60 fps se pide
-     * muchas veces por segundo. Se cachea y se invalida al mover la tecla.
+     * muchas veces por segundo. Se cachea y se invalida al mover o reescalar
+     * la tecla. Se guarda como Path2D y no como Area porque rellenar un Area
+     * obliga a Java2D a retesetelar la geometria en cada fill.
      */
     private Shape formaCache;
     private Rectangle cajaCache;
 
-    public Tecla(int n) {
+    public Tecla(int n, MedidasTeclado medidas) {
         this.nota = n;
+        this.medidas = medidas;
         this.posicion = null;
         this.pulsada = false;
         this.velocidad = 0;
@@ -57,9 +58,23 @@ public abstract class Tecla implements Pulsable {
         return this.nota;
     }
 
+    public MedidasTeclado getMedidas() {
+        return this.medidas;
+    }
+
+    /** Cambia el tamano de la tecla sin perder su estado ni su identidad. */
+    public void setMedidas(MedidasTeclado medidas) {
+        this.medidas = medidas;
+        invalidarForma();
+    }
+
     @Override
     public void setPosicion(int x, int y) {
         this.posicion = new Point(x, y);
+        invalidarForma();
+    }
+
+    private void invalidarForma() {
         this.formaCache = null;
         this.cajaCache = null;
     }
@@ -124,6 +139,22 @@ public abstract class Tecla implements Pulsable {
         return c;
     }
 
+    @Override
+    public void dibujar(Graphics2D g) {
+        dibujar(g, getIntensidad());
+    }
+
+    /**
+     * Dibuja la tecla apagada, ignorando si esta pulsada ahora mismo.
+     * La Escena lo usa para hornear el teclado en reposo en su imagen cacheada,
+     * y necesita que salga apagado aunque la cancion ya este sonando.
+     */
+    public void dibujarEnReposo(Graphics2D g) {
+        dibujar(g, 0);
+    }
+
+    protected abstract void dibujar(Graphics2D g, double intensidad);
+
     /**
      * Contorno de la tecla en coordenadas absolutas, sin hundimiento.
      * Es lo que hay que usar para saber si un clic del raton cae dentro.
@@ -157,7 +188,7 @@ public abstract class Tecla implements Pulsable {
         Shape forma = getForma();
         if (this.pulsada) {
             forma = AffineTransform
-                    .getTranslateInstance(0, Estilo.HUNDIMIENTO)
+                    .getTranslateInstance(0, this.medidas.getHundimiento())
                     .createTransformedShape(forma);
         }
         return forma;

@@ -66,6 +66,18 @@ public class PanelCanales extends JPanel {
         return nombres;
     }
 
+    /** Un aviso en vez de la lista de canales. */
+    public void mostrarAviso(String texto) {
+        removeAll();
+        this.interruptores.clear();
+        this.canales.clear();
+        JLabel aviso = new JLabel("<html><i>" + texto + "</i></html>");
+        aviso.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        add(aviso);
+        revalidate();
+        repaint();
+    }
+
     /** En el modo libre no hay canales que mezclar: se explica y ya. */
     public void mostrarLibre() {
         removeAll();

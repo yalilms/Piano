@@ -2,6 +2,7 @@ package jd.piano.pruebas;
 
 import jd.piano.programa.Escena;
 import jd.piano.programa.ModoDeUso;
+import jd.piano.programa.PantallaInicio;
 import jd.piano.programa.PianoSencillo;
 import jd.piano.programa.RastroLibre;
 import jd.piano.programa.SintetizadorTeclado;
@@ -10,7 +11,10 @@ import jd.piano.teclas.Piano;
 
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Los modos de uso y el modo de tocar libre. */
 public final class PruebaModos {
@@ -21,6 +25,7 @@ public final class PruebaModos {
     public static Comprobador ejecutar() {
         Comprobador c = new Comprobador("modos de uso");
         modos(c);
+        pantallaInicio(c);
         rastro(c);
         sostenido(c);
         return c;
@@ -64,6 +69,60 @@ public final class PruebaModos {
             }
         }
         c.comprobar("no hay combinaciones imposibles", coherente);
+    }
+
+    /**
+     * La pantalla de inicio: que se pinte, y que al pinchar cada tarjeta avise
+     * del modo que le toca. Antes el programa cargaba y reproducia una cancion
+     * al abrir sin preguntar nada.
+     */
+    private static void pantallaInicio(Comprobador c) {
+        List<ModoDeUso> elegidos = new ArrayList<>();
+        PantallaInicio pantalla = new PantallaInicio(elegidos::add);
+        pantalla.setSize(1000, 640);
+
+        BufferedImage img = new BufferedImage(1000, 640, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = img.createGraphics();
+        pantalla.paint(g);
+        g.dispose();
+
+        // Que haya pintado algo y no se haya quedado en negro
+        int distintos = 0;
+        int primero = img.getRGB(0, 0);
+        for (int y = 0; y < 640 && distintos < 2; y += 7) {
+            for (int x = 0; x < 1000 && distintos < 2; x += 7) {
+                if (img.getRGB(x, y) != primero) {
+                    distintos++;
+                }
+            }
+        }
+        c.comprobar("la pantalla de inicio se pinta", distintos >= 2);
+
+        // Un clic en el centro de cada tarjeta debe avisar de su modo. Las
+        // posiciones salen de la misma rejilla de dos columnas que dibuja.
+        for (ModoDeUso modo : ModoDeUso.values()) {
+            elegidos.clear();
+            int indice = modo.ordinal();
+            int columna = indice % 2;
+            int fila = indice / 2;
+            int x = 40 + columna * ((1000 - 80) / 2) + 100;
+            int y = 132 + (640 - 132 - 40 - 2 * 118 - 18) / 2 + fila * (118 + 18) + 59;
+            pantalla.dispatchEvent(new MouseEvent(pantalla, MouseEvent.MOUSE_CLICKED,
+                    System.currentTimeMillis(), 0, x, y, 1, false));
+            boolean acierta = elegidos.size() == 1 && elegidos.get(0) == modo;
+            if (!acierta) {
+                c.dato("la tarjeta de " + modo.getNombre() + " no responde en "
+                        + x + "," + y + " (aviso: " + elegidos + ")");
+            }
+            c.comprobar("la tarjeta de " + modo.getNombre() + " elige su modo",
+                    acierta);
+        }
+
+        elegidos.clear();
+        pantalla.dispatchEvent(new MouseEvent(pantalla, MouseEvent.MOUSE_CLICKED,
+                System.currentTimeMillis(), 0, 5, 5, 1, false));
+        c.comprobar("pinchar fuera de las tarjetas no elige nada",
+                elegidos.isEmpty());
     }
 
     /** El rastro del modo libre: barras que crecen y suben. */

@@ -3,7 +3,7 @@
 Visualizador de ficheros MIDI en Java: las notas caen sobre un teclado que se
 ilumina al ritmo de la canción, y también se puede tocar.
 
-![Piano sencillo con las notas cayendo](docs/piano-sencillo.png)
+![Pantalla de inicio](docs/inicio.png)
 
 ## 📋 Descripción
 
@@ -12,7 +12,9 @@ Aplicaciones Multiplataforma (DAM) en el IES Hermenegildo Lanz (Granada).
 
 ## 🎛️ Cuatro modos de uso
 
-Se eligen en el menú **Modo**, o con `Ctrl+1` a `Ctrl+4`.
+Al abrir sale la pantalla de inicio y **no suena nada** hasta que eliges.
+Después se puede cambiar de modo en el menú **Modo**, con `Ctrl+1` a `Ctrl+4`,
+o volver al inicio con `Ctrl+0`.
 
 | Modo | Qué hace |
 |---|---|
@@ -45,6 +47,8 @@ mientras mantienes la tecla y se desvanece al soltarla, con el nombre de la
 - **Mezcla** — silenciar o aislar cualquier canal, y cambiar el instrumento de
   cualquier pista sin tocar el fichero.
 - **Transporte** — pausa, salto a cualquier punto y tempo de x0,25 a x3.
+
+![Notas cayendo](docs/piano-sencillo.png)
 
 ### Modo aprendizaje
 
@@ -97,6 +101,7 @@ java -cp "out;lib/*" jd.piano.programa.ProgramaSwing
 | `←` `→` | Baja o sube una octava |
 | Espacio | Pausa, o pedal de resonancia en el modo libre |
 | `Ctrl+1` a `Ctrl+4` | Cambiar de modo |
+| `Ctrl+0` | Volver a la pantalla de inicio |
 | Clic y arrastre en las teclas | Toca con el ratón |
 
 Lo que tocas suena por el canal 16, que es el que menos usan los ficheros MIDI,
@@ -122,6 +127,7 @@ src/jd/piano/programa/   la aplicación
   PianoSencillo, MultiPiano               los dos dibujados de teclado
   Escena, Lienzo, VentanaPrincipal        dibujado y ventana
   Cascada, Particulas, Bateria            capas animadas
+  PantallaInicio                          el menu de inicio
   ModoDeUso, BarraDeMenu                  los cuatro modos y el menu
   ModoAprendizaje                         esperar la nota correcta
   RastroLibre                             el rastro del modo libre
@@ -148,7 +154,7 @@ se llegaría a 60 fps.
 .\probar.ps1
 ```
 
-90 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+96 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -172,6 +178,7 @@ puede romper sin darse cuenta:
 - Que los cuatro modos sean coherentes: no puede haber notas cayendo sin
   canción ni con varios teclados a la vez.
 - Que el rastro del modo libre aparezca al tocar.
+- Que la pantalla de inicio se pinte y que cada tarjeta elija su modo.
 
 Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
 suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.

@@ -37,6 +37,8 @@ public class BarraDeMenu extends JMenuBar {
 
         JMenu menuModo = new JMenu("Modo");
         menuModo.setMnemonic(KeyEvent.VK_M);
+        menuModo.add(item("Volver al inicio", KeyEvent.VK_0, acciones::inicio));
+        menuModo.addSeparator();
         ButtonGroup grupo = new ButtonGroup();
         int numero = 1;
         for (ModoDeUso modo : ModoDeUso.values()) {
@@ -137,6 +139,8 @@ public class BarraDeMenu extends JMenuBar {
 
     /** Lo que el menu puede pedirle a la ventana. */
     public interface Acciones {
+        void inicio();
+
         void abrir();
 
         void alternarPausa();

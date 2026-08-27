@@ -5,6 +5,8 @@ import jd.piano.teclas.Piano;
 import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Composite;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -48,6 +50,9 @@ public class Escena {
     private BufferedImage fondo;
     private Image fondoOriginal;
     private Piano piano;
+
+    /** Aviso centrado para cuando no hay piano que dibujar. */
+    private String mensaje;
     private final List<CapaSuperpuesta> superpuestas = new ArrayList<>();
 
     /** Fondo, tapa y reflejo, sin teclas. Sirve para borrar la region sucia. */
@@ -65,6 +70,7 @@ public class Escena {
         this.fondo = null;
         this.fondoOriginal = null;
         this.piano = null;
+        this.mensaje = null;
         this.escenarioSinTeclas = null;
         this.escenarioCompleto = null;
         this.vineta = null;
@@ -85,6 +91,18 @@ public class Escena {
 
     public void setPiano(Piano piano) {
         this.piano = piano;
+        if (piano != null) {
+            this.mensaje = null;
+        }
+        invalidarCaches();
+    }
+
+    /**
+     * Texto centrado en el lienzo, para cuando todavia no hay nada que dibujar.
+     * Sin esto la pantalla de espera se quedaba en madera pelada.
+     */
+    public void setMensaje(String mensaje) {
+        this.mensaje = mensaje;
         invalidarCaches();
     }
 
@@ -166,7 +184,22 @@ public class Escena {
         // a pantalla completa en cada frame; sobre las zonas que se repintan se
         // vuelve a aplicar, pero solo en ese trozo.
         g2.drawImage(this.vineta, 0, 0, null);
+        if (this.mensaje != null) {
+            dibujarMensaje(g2);
+        }
         g2.dispose();
+    }
+
+    private void dibujarMensaje(Graphics2D g) {
+        aplicarCalidad(g);
+        g.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 26));
+        FontMetrics m = g.getFontMetrics();
+        int x = (this.ancho - m.stringWidth(this.mensaje)) / 2;
+        int y = this.alto / 2;
+        g.setColor(new Color(0, 0, 0, 140));
+        g.drawString(this.mensaje, x + 2, y + 2);
+        g.setColor(new Color(238, 226, 204));
+        g.drawString(this.mensaje, x, y);
     }
 
     public void dibujar(Graphics2D g) {

@@ -21,6 +21,7 @@ import javax.swing.Timer;
 import javax.swing.TransferHandler;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.Rectangle;
@@ -61,6 +62,9 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     private final JList<File> listaCanciones;
     private final JComboBox<String> selectorInstrumento;
     private final JLabel etiquetaInfo;
+    private final PantallaInicio pantallaInicio;
+    private final JPanel tarjetas;
+    private final CardLayout cambiador;
 
     private ModoDeUso modo;
     private String rutaActual;
@@ -123,10 +127,24 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
         this.panelControles = new PanelControles(this.reproductor, this::capturar);
 
+        JPanel vistaPiano = new JPanel(new BorderLayout());
+        vistaPiano.add(crearLateral(), BorderLayout.WEST);
+        vistaPiano.add(this.lienzo, BorderLayout.CENTER);
+        vistaPiano.add(this.panelControles, BorderLayout.SOUTH);
+
+        // Dos tarjetas: la pantalla de inicio a pantalla completa, o el piano.
+        // Antes se cargaba y sonaba una cancion al abrir sin preguntar.
+        this.pantallaInicio = new PantallaInicio(this::elegirDesdeElInicio);
+        if (fondo != null) {
+            this.pantallaInicio.setFondo(fondo);
+        }
+        this.cambiador = new CardLayout();
+        this.tarjetas = new JPanel(this.cambiador);
+        this.tarjetas.add(this.pantallaInicio, "inicio");
+        this.tarjetas.add(vistaPiano, "piano");
+
         setLayout(new BorderLayout());
-        add(crearLateral(), BorderLayout.WEST);
-        add(this.lienzo, BorderLayout.CENTER);
-        add(this.panelControles, BorderLayout.SOUTH);
+        add(this.tarjetas, BorderLayout.CENTER);
 
         habilitarArrastrarYSoltar();
         vigilarElFinal();
@@ -179,11 +197,59 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                         this.modo = ModoDeUso.VER_CANCION;
                         this.menu.marcarModo(this.modo);
                     }
+                    this.cambiador.show(this.tarjetas, "piano");
                     cargar(elegida.getPath());
                 }
             }
         });
         return lista;
+    }
+
+    // ---------- pantalla de inicio ----------
+
+    /** Vuelve a la pantalla de inicio y deja de sonar lo que hubiera. */
+    @Override
+    public void inicio() {
+        this.reproductor.parar();
+        this.cambiador.show(this.tarjetas, "inicio");
+        setTitle("Piano MIDI");
+        this.pantallaInicio.requestFocusInWindow();
+    }
+
+    /**
+     * Lo que se elige en la pantalla de inicio. El modo libre entra directo; los
+     * que necesitan cancion pasan al piano con la lista lista para elegir, sin
+     * poner nada a sonar por su cuenta.
+     */
+    private void elegirDesdeElInicio(ModoDeUso elegido) {
+        this.modo = elegido;
+        this.menu.marcarModo(elegido);
+        this.cambiador.show(this.tarjetas, "piano");
+
+        if (!elegido.necesitaCancion()) {
+            prepararLibre();
+            this.lienzo.requestFocusInWindow();
+        } else if (this.rutaActual != null) {
+            cargar(this.rutaActual);
+        } else {
+            esperarQueElijanCancion();
+        }
+    }
+
+    /** Piano vacio y la lista esperando: nada suena hasta que se elige. */
+    private void esperarQueElijanCancion() {
+        this.escena.setPiano(null);
+        this.escena.quitarSuperpuestas();
+        this.escena.setMensaje("Elige una cancion de la lista");
+        this.cascada = null;
+        this.aprendizaje = null;
+        this.rastro = null;
+        this.panelControles.setVisible(false);
+        this.panelCanales.mostrarAviso("Aqui saldran los canales de la cancion.");
+        this.etiquetaInfo.setText("<html><b>" + this.modo.getNombre() + "</b><br>"
+                + "<i>" + this.modo.getExplicacion() + "</i></html>");
+        setTitle("Piano MIDI - " + this.modo.getNombre());
+        this.listaCanciones.requestFocusInWindow();
     }
 
     // ---------- modos de uso ----------
@@ -199,11 +265,10 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             prepararLibre();
         } else if (this.rutaActual != null) {
             cargar(this.rutaActual);
-        } else if (!this.modeloCanciones.isEmpty()) {
-            this.listaCanciones.setSelectedIndex(0);
         } else {
-            prepararLibre();
+            esperarQueElijanCancion();
         }
+        this.cambiador.show(this.tarjetas, "piano");
         this.lienzo.requestFocusInWindow();
     }
 
@@ -538,18 +603,11 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     }
 
     /**
-     * Arranca con la primera cancion, o directamente en el modo libre si no hay
-     * ninguna: asi el programa sirve para algo aunque falte la carpeta.
+     * Abre en la pantalla de inicio. No se carga ni suena nada hasta que se
+     * elige que hacer.
      */
     public void arrancar() {
         setVisible(true);
-        if (this.modeloCanciones.isEmpty()) {
-            this.modo = ModoDeUso.TOCAR_LIBRE;
-            this.menu.marcarModo(this.modo);
-            prepararLibre();
-        } else {
-            this.listaCanciones.setSelectedIndex(0);
-        }
-        this.lienzo.requestFocusInWindow();
+        this.cambiador.show(this.tarjetas, "inicio");
     }
 }

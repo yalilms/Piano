@@ -35,6 +35,9 @@ public class VentanaPrincipal extends JFrame {
     private static final int NOTA_FINAL = 108;
     private static final int MARGEN = 48;
 
+    /** Hueco que se deja bajo el teclado para la tapa y su reflejo. */
+    private static final int ALTO_TAPA_LIBRE = 46;
+
     private static final String MODO_SENCILLO = "Piano sencillo";
     private static final String MODO_MULTI = "Un teclado por canal";
 
@@ -46,6 +49,7 @@ public class VentanaPrincipal extends JFrame {
     private final JComboBox<String> selectorModo;
     private final JLabel etiquetaInfo;
     private String rutaActual;
+    private Cascada cascada;
 
     public VentanaPrincipal(List<String> canciones) {
         super("Piano MIDI");
@@ -56,6 +60,7 @@ public class VentanaPrincipal extends JFrame {
 
         this.reproductor = new Reproductor();
         this.rutaActual = null;
+        this.cascada = null;
         this.escena = new Escena(Math.max(400, ancho - 240), Math.max(300, alto - 120));
         this.lienzo = new Lienzo(this.escena);
         this.lienzo.setAlRedimensionar(this::recolocar);
@@ -183,6 +188,16 @@ public class VentanaPrincipal extends JFrame {
             }
 
             this.escena.setPiano(piano);
+
+            // Las notas cayendo solo tienen sentido en el modo sencillo: en el
+            // multi los teclados van pegados y no hay franja por la que caer.
+            if (multi) {
+                this.cascada = null;
+            } else {
+                this.cascada = new Cascada(Partitura.de(ruta), this.reproductor);
+            }
+            this.escena.setSuperposicion(this.cascada);
+
             recolocar();
 
             this.reproductor.conectar(piano);
@@ -222,8 +237,17 @@ public class VentanaPrincipal extends JFrame {
             // 1250 px y se salia por la derecha en ventanas mas estrechas.
             piano.setMedidas(layoutPara(1).getMedidas());
         }
-        piano.setPosicion((this.escena.getAnchura() - piano.getAnchura()) / 2,
-                (this.escena.getAltura() - piano.getAltura()) / 2);
+        // En modo sencillo el teclado se baja para dejar sitio a las notas
+        int y = this.cascada != null
+                ? this.escena.getAltura() - piano.getAltura() - ALTO_TAPA_LIBRE
+                : (this.escena.getAltura() - piano.getAltura()) / 2;
+        piano.setPosicion((this.escena.getAnchura() - piano.getAnchura()) / 2, y);
+
+        if (this.cascada != null) {
+            int arriba = MARGEN / 2;
+            this.cascada.setZona(arriba,
+                    y - piano.getMedidas().getAlturaFieltro() - arriba);
+        }
         this.escena.prepararCaches();
     }
 

@@ -37,18 +37,23 @@ public final class Estilo {
     public static final long FUNDIDO_MS = 260;
 
     /**
-     * Un color por canal MIDI. Elegidos para distinguirse entre si y para que
-     * se vean sobre marfil: nada de amarillo puro, que se pierde.
+     * Un color por canal MIDI. Nada de amarillo puro, que se pierde sobre
+     * marfil.
+     *
+     * No van en orden de tono a proposito: recorrer la rueda de color dejaba
+     * los canales 0 a 4 todos calidos y se confundian entre si. Como casi
+     * ninguna cancion pasa de nueve canales, los primeros indices son los que
+     * importan y aqui van alternando frio y calido para separarse al maximo.
      */
     private static final Color[] COLORES_CANAL = {
-            new Color(232, 69, 60),    new Color(242, 118, 43),
-            new Color(240, 168, 30),   new Color(201, 193, 31),
-            new Color(127, 191, 63),   new Color(53, 168, 91),
-            new Color(23, 165, 151),   new Color(46, 143, 212),
-            new Color(63, 95, 207),    new Color(123, 79, 209),
-            new Color(180, 75, 201),   new Color(224, 71, 155),
-            new Color(181, 118, 106),  new Color(111, 143, 168),
-            new Color(143, 163, 60),   new Color(154, 154, 154)
+            new Color(232, 69, 60),    new Color(46, 143, 212),
+            new Color(53, 168, 91),    new Color(201, 75, 201),
+            new Color(240, 168, 30),   new Color(23, 165, 151),
+            new Color(123, 79, 209),   new Color(242, 118, 43),
+            new Color(224, 71, 155),   new Color(127, 191, 63),
+            new Color(63, 95, 207),    new Color(181, 118, 106),
+            new Color(143, 163, 60),   new Color(111, 143, 168),
+            new Color(201, 193, 31),   new Color(154, 154, 154)
     };
 
     public static Color colorDeCanal(int canal) {

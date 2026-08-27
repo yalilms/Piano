@@ -44,7 +44,8 @@ import java.util.List;
  */
 public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
-    private static final int NOTA_INICIAL = 24;
+    /** La0 a Do8: las 88 teclas de un piano de cola. */
+    private static final int NOTA_INICIAL = 21;
     private static final int NOTA_FINAL = 108;
     private static final int MARGEN = 48;
 
@@ -70,6 +71,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     private ModoDeUso modo;
     private String rutaActual;
+    /** El conjunto en marcha, o null si el modo no reparte canales. */
+    private Conjunto conjunto;
     private Cascada cascada;
     private ModoAprendizaje aprendizaje;
     private RastroLibre rastro;
@@ -83,6 +86,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
         this.modo = ModoDeUso.VER_CANCION;
         this.rutaActual = null;
+        this.conjunto = null;
         this.cascada = null;
         this.aprendizaje = null;
         this.rastro = null;
@@ -119,8 +123,10 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.selectorVerComo = new JComboBox<>(TipoInstrumento.values());
         this.selectorVerComo.setToolTipText("Con que instrumento se ve la cancion");
         this.selectorVerComo.addActionListener(e -> {
-            if (this.rutaActual != null && this.modo.necesitaCancion()) {
+            if (this.rutaActual != null && this.modo.eligeInstrumento()) {
                 cargar(this.rutaActual);
+            } else if (!this.modo.necesitaCancion()) {
+                prepararLibre();
             }
             this.lienzo.requestFocusInWindow();
         });
@@ -255,6 +261,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     /** Piano vacio y la lista esperando: nada suena hasta que se elige. */
     private void esperarQueElijanCancion() {
+        this.conjunto = null;
+        this.selectorVerComo.setEnabled(this.modo.eligeInstrumento());
         this.escena.setInstrumento(null);
         this.escena.quitarSuperpuestas();
         this.escena.setMensaje("Elige una cancion de la lista");
@@ -262,6 +270,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.aprendizaje = null;
         this.rastro = null;
         this.panelControles.setVisible(false);
+        this.panelCanales.setConjunto(null, null);
         this.panelCanales.mostrarAviso("Aqui saldran los canales de la cancion.");
         this.etiquetaInfo.setText("<html><b>" + this.modo.getNombre() + "</b><br>"
                 + "<i>" + this.modo.getExplicacion() + "</i></html>");
@@ -299,6 +308,19 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.cambiador.show(this.tarjetas, "piano");
     }
 
+    /**
+     * Un canal se ha mandado a otro instrumento. No se recarga la cancion: los
+     * paneles cambian de tamano, asi que se recoloca y se rehacen las imagenes
+     * cacheadas, pero lo que suena sigue sonando.
+     */
+    private void reasignado() {
+        recolocar();
+        if (this.rutaActual != null && this.conjunto != null) {
+            this.etiquetaInfo.setText(informeDelConjunto(this.rutaActual));
+        }
+        this.lienzo.requestFocusInWindow();
+    }
+
     public ModoDeUso getModo() {
         return this.modo;
     }
@@ -309,6 +331,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.rutaActual = null;
         this.cascada = null;
         this.aprendizaje = null;
+        this.conjunto = null;
+        this.selectorVerComo.setEnabled(true);
 
         InstrumentoVisual instrumento = getTipoElegido().crear();
         this.escena.setInstrumento(instrumento);
@@ -320,6 +344,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.reproductor.conectar(instrumento);
 
         this.bateria.construir(List.of());
+        this.panelCanales.setConjunto(null, null);
         this.panelCanales.mostrarLibre();
         this.panelControles.setVisible(false);
         this.listaCanciones.clearSelection();
@@ -343,12 +368,13 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             InstrumentoVisual instrumento = crearInstrumento(analisis);
             this.escena.setInstrumento(instrumento);
             this.escena.quitarSuperpuestas();
-            montarCapas(ruta, analisis);
+            montarCapas(ruta, analisis, instrumento);
 
             recolocar();
             this.sintetizador.conectar(instrumento);
             this.reproductor.conectar(instrumento);
             this.reproductor.cargar(ruta);
+            this.panelCanales.setConjunto(this.conjunto, this::reasignado);
             this.panelCanales.mostrar(analisis);
             this.reproductor.reproducir();
 
@@ -373,14 +399,20 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
      * manda el instrumento elegido en "Ver como".
      */
     private InstrumentoVisual crearInstrumento(AnalisisMidi analisis) {
+        this.conjunto = null;
         InstrumentoVisual instrumento;
         if (this.modo.esPorCanales()) {
             List<Integer> canales = analisis.getCanalesUsados();
             instrumento = new MultiPiano(canales, NOTA_INICIAL, NOTA_FINAL,
                     layoutPara(canales.size()));
+        } else if (this.modo.esConjunto()) {
+            this.conjunto = Conjunto.para(analisis);
+            instrumento = this.conjunto;
         } else {
             instrumento = getTipoElegido().crear();
         }
+        // El selector solo manda donde de verdad se le hace caso
+        this.selectorVerComo.setEnabled(this.modo.eligeInstrumento());
         return instrumento;
     }
 
@@ -389,13 +421,15 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         return elegido instanceof TipoInstrumento tipo ? tipo : TipoInstrumento.TECLADO;
     }
 
-    private void montarCapas(String ruta, AnalisisMidi analisis) throws Exception {
+    private void montarCapas(String ruta, AnalisisMidi analisis,
+                             InstrumentoVisual instrumento) throws Exception {
         this.cascada = null;
         this.aprendizaje = null;
 
         // Las notas cayendo solo caben con un teclado: en el modo por canales
-        // van pegados y no hay franja por la que caer.
-        if (this.modo.tieneCascada()) {
+        // van pegados y no hay franja por la que caer. Y el propio instrumento
+        // puede decir que no le pegan, como el circulo cromatico.
+        if (this.modo.tieneCascada() && instrumento.admiteCascada()) {
             Partitura partitura = Partitura.de(ruta);
             this.cascada = new Cascada(partitura, this.reproductor);
             this.escena.anadirSuperpuesta(this.cascada);
@@ -431,25 +465,34 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         if (instrumento == null) {
             return;
         }
-        // Cada instrumento sabe reescalarse: el teclado cambia el tamano de
-        // tecla, el mastil el largo de los trastes
-        instrumento.ajustarA(this.escena.getAnchura() - 2 * MARGEN,
-                this.escena.getAltura() - 2 * MARGEN);
-
-        // Con cascada o con rastro el instrumento se baja, para dejar sitio
-        boolean hayFranja = this.cascada != null || this.rastro != null;
-        int y = hayFranja
-                ? this.escena.getAltura() - instrumento.getAltura() - ALTO_TAPA_LIBRE
-                : (this.escena.getAltura() - instrumento.getAltura()) / 2;
-        instrumento.setPosicion(
-                (this.escena.getAnchura() - instrumento.getAnchura()) / 2, y);
-
+        // La bateria se queda con una franja arriba, y hay que apartarla antes
+        // de colocar nada: un instrumento centrado que ocupe casi todo el alto,
+        // como el circulo cromatico, se metia por debajo de los parches
         int arriba = MARGEN / 2;
         if (!this.bateria.estaVacia()) {
             this.bateria.setZona(new Rectangle(arriba, arriba,
                     this.escena.getAnchura() - 2 * arriba, 0));
             arriba += this.bateria.getAlturaNecesaria() + MARGEN / 3;
         }
+
+        // Cada instrumento sabe reescalarse: el teclado cambia el tamano de
+        // tecla, el mastil el largo de los trastes, el xilofono el de las barras
+        int ancho = this.escena.getAnchura() - 2 * MARGEN;
+        boolean hayFranja = this.cascada != null || this.rastro != null;
+        int y;
+        if (hayFranja) {
+            // Pegado abajo, que las notas tienen que caer hasta el
+            instrumento.ajustarA(ancho, this.escena.getAltura() - 2 * MARGEN);
+            y = this.escena.getAltura() - instrumento.getAltura() - ALTO_TAPA_LIBRE;
+        } else {
+            // Centrado en lo que queda libre por debajo de la bateria
+            int libre = this.escena.getAltura() - arriba - MARGEN / 2;
+            instrumento.ajustarA(ancho, libre);
+            y = arriba + (libre - instrumento.getAltura()) / 2;
+        }
+        instrumento.setPosicion(
+                (this.escena.getAnchura() - instrumento.getAnchura()) / 2, y);
+
         if (this.cascada != null) {
             this.cascada.setZona(arriba, y - 4 - arriba);
         }
@@ -531,7 +574,18 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                 .append(analisis.getTotalNotas()).append(" notas, ")
                 .append(analisis.getCanalesUsados().size()).append(" canales<br>");
 
-        if (!this.modo.esPorCanales()) {
+        if (this.modo.esConjunto() && this.conjunto != null) {
+            texto.append(this.conjunto.getCuantosInstrumentos())
+                    .append(" instrumentos: ")
+                    .append(this.conjunto.getNombre()).append("<br>");
+            try {
+                double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta));
+                texto.append("Se ven el ").append(Math.round(cobertura))
+                        .append("% de las notas<br>");
+            } catch (Exception error) {
+                // sin cobertura que informar
+            }
+        } else if (!this.modo.esPorCanales()) {
             try {
                 double cobertura = getTipoElegido().coberturaDe(Partitura.de(ruta));
                 // Sin articulo, que "en el Guitarra" no concuerda
@@ -544,6 +598,27 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             } catch (Exception error) {
                 // sin cobertura que informar
             }
+        }
+        texto.append("<i>").append(this.modo.getExplicacion()).append("</i></html>");
+        return texto.toString();
+    }
+
+    /**
+     * El informe cuando solo ha cambiado el reparto de canales. Se rehace
+     * aparte porque el reparto se puede tocar sin recargar la cancion.
+     */
+    private String informeDelConjunto(String ruta) {
+        StringBuilder texto = new StringBuilder("<html><b>");
+        texto.append(this.modo.getNombre()).append("</b><br>")
+                .append(this.conjunto.getCuantosInstrumentos())
+                .append(" instrumentos: ")
+                .append(this.conjunto.getNombre()).append("<br>");
+        try {
+            double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta));
+            texto.append("Se ven el ").append(Math.round(cobertura))
+                    .append("% de las notas<br>");
+        } catch (Exception error) {
+            // sin cobertura que informar
         }
         texto.append("<i>").append(this.modo.getExplicacion()).append("</i></html>");
         return texto.toString();

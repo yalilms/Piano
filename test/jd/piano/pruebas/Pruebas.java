@@ -27,6 +27,7 @@ public final class Pruebas {
         resultados.add(PruebaAprendizaje.ejecutar());
         resultados.add(PruebaModos.ejecutar());
         resultados.add(PruebaInstrumentos.ejecutar());
+        resultados.add(PruebaConjunto.ejecutar());
 
         int aciertos = 0;
         int fallos = 0;

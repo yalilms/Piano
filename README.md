@@ -3,25 +3,72 @@
 Visualizador de ficheros MIDI en Java: las notas caen sobre un teclado que se
 ilumina al ritmo de la canción, y también se puede tocar.
 
-![Pantalla de inicio](docs/inicio.png)
+![Pantalla de inicio](docs/inicio.jpg)
 
 ## 📋 Descripción
 
 Proyecto académico grupal realizado para el Grado Superior en Desarrollo de
 Aplicaciones Multiplataforma (DAM) en el IES Hermenegildo Lanz (Granada).
 
-## 🎛️ Cuatro modos de uso
+## 🎛️ Cinco modos de uso
 
 Al abrir sale la pantalla de inicio y **no suena nada** hasta que eliges.
-Después se puede cambiar de modo en el menú **Modo**, con `Ctrl+1` a `Ctrl+4`,
+Después se puede cambiar de modo en el menú **Modo**, con `Ctrl+1` a `Ctrl+5`,
 o volver al inicio con `Ctrl+0`.
 
 | Modo | Qué hace |
 |---|---|
-| **Ver una canción** | Un teclado con las notas cayendo |
+| **Ver una canción** | Un instrumento con las notas cayendo |
 | **Ver por canales** | Un teclado por cada canal de la canción |
+| **Varios instrumentos** | Cada pista en el instrumento que le pega, todos a la vez |
 | **Aprender a tocarla** | Se para y espera a que toques la nota que viene |
 | **Tocar libre** | Sin canción: el teclado para ti |
+
+## 🎸 Cinco instrumentos
+
+Un piano no es la única forma de mirar una canción. El desplegable **Ver como**
+cambia con qué se dibuja, y el panel avisa de cuánto de la canción cabe en el
+que elijas, porque una guitarra no llega a las notas graves de un piano.
+
+| Instrumento | Qué es | Alcance |
+|---|---|---|
+| **Teclado** | Las 88 teclas de un piano de cola, de La0 a Do8 | prácticamente todo |
+| **Guitarra** | Seis cuerdas y quince trastes | 40 notas |
+| **Bajo** | Cuatro cuerdas, una octava más grave | 31 notas |
+| **Xilófono** | Cinco octavas de barras de madera, las alteradas detrás | 61 notas |
+| **Círculo cromático** | Las doce notas en rueda, con líneas entre las que suenan juntas | todo |
+
+En el mástil una nota se puede pisar en varias posiciones —el Mi de la cuarta
+cuerda es el mismo que el de la quinta con cinco trastes— y se elige siempre el
+traste más bajo, que es el que queda cerca de la cejuela. Los trastes se separan
+como en un mástil de verdad, cada vez menos conforme se sube.
+
+![Xilófono](docs/xilofono.jpg)
+
+El círculo cromático no es un instrumento: es una forma de ver los intervalos.
+Un acorde mayor siempre dibuja el mismo triángulo, y al cambiar de tonalidad el
+triángulo gira sin deformarse. Con un teclado eso no se ve. Es el único que
+representa el 100 % de cualquier canción, porque todas las octavas de la misma
+nota caen en el mismo sitio.
+
+![Círculo cromático](docs/circulo.jpg)
+
+### Varios instrumentos a la vez
+
+Reparte los canales de la canción entre varios instrumentos apilados, mirando el
+`PROGRAM_CHANGE` de cada uno: las pistas de guitarra al mástil, las de bajo al
+bajo, las de marimba al xilófono y el resto al teclado. Cada panel lleva el
+color de los canales que le tocan.
+
+El reparto tiene la última palabra el rango, no la familia: una pista de
+guitarra que baja al Mi grave del bajo no cabe en un mástil, así que se le da un
+teclado. Con eso el reparto **no pierde nada que un teclado solo sí mostraría**
+—medido sobre las nueve canciones: entre el 99,7 % y el 100 % de las notas.
+
+Y se puede cambiar a mano: cada canal tiene su desplegable **se ve en** en el
+panel de mezcla, y moverlo no para la canción.
+
+![Varios instrumentos](docs/conjunto.jpg)
 
 ### Tocar libre
 
@@ -29,7 +76,7 @@ Sin ninguna canción cargada. Lo que toques deja una barra que crece hacia arrib
 mientras mantienes la tecla y se desvanece al soltarla, con el nombre de la
 última nota en grande. El espacio hace de pedal de resonancia.
 
-![Tocar libre](docs/tocar-libre.png)
+![Tocar libre](docs/tocar-libre.jpg)
 
 ## ✨ Qué hace
 
@@ -42,13 +89,17 @@ mientras mantienes la tecla y se desvanece al soltarla, con el nombre de la
   viene, estilo Synthesia.
 - **Un teclado por canal** — modo alternativo con un teclado para cada canal
   MIDI de la canción, cada uno con su color.
+- **Cinco instrumentos** — teclado, guitarra, bajo, xilófono y círculo
+  cromático, intercambiables sobre la marcha.
+- **Varios a la vez** — cada pista de la canción en el instrumento que le pega,
+  repartido solo y cambiable canal por canal.
 - **Se puede tocar** — con el teclado del ordenador o con el ratón, eligiendo
   entre los 128 instrumentos de General MIDI.
 - **Mezcla** — silenciar o aislar cualquier canal, y cambiar el instrumento de
   cualquier pista sin tocar el fichero.
 - **Transporte** — pausa, salto a cualquier punto y tempo de x0,25 a x3.
 
-![Notas cayendo](docs/piano-sencillo.png)
+![Notas cayendo](docs/piano-sencillo.jpg)
 
 ### Modo aprendizaje
 
@@ -57,11 +108,11 @@ la pulses. Vigila un solo canal —en estas canciones hay hasta trece sonando a 
 vez y no habría manera de tocarlos todos— y elige el que más se parece a la
 melodía. Al activarlo adelanta hasta la primera nota que hay que tocar.
 
-![Modo aprendizaje esperando una nota](docs/aprendizaje.png)
+![Modo aprendizaje esperando una nota](docs/aprendizaje.jpg)
 
 ### Un teclado por canal
 
-![Un teclado por canal](docs/multi-piano.png)
+![Un teclado por canal](docs/multi-piano.jpg)
 
 ## ▶️ Cómo se lanza
 
@@ -100,7 +151,7 @@ java -cp "out;lib/*" jd.piano.programa.ProgramaSwing
 | `Q` `2` `W` `3` `E` `R` `5` `T` `6` `Y` `7` `U` `I` | La octava siguiente |
 | `←` `→` | Baja o sube una octava |
 | Espacio | Pausa, o pedal de resonancia en el modo libre |
-| `Ctrl+1` a `Ctrl+4` | Cambiar de modo |
+| `Ctrl+1` a `Ctrl+5` | Cambiar de modo |
 | `Ctrl+0` | Volver a la pantalla de inicio |
 | Clic y arrastre en las teclas | Toca con el ratón |
 
@@ -117,7 +168,8 @@ Las de la carpeta `canciones` salen solas en la lista. También se puede
 ## 🧱 Cómo está organizado
 
 ```
-src/jd/piano/teclas/     el instrumento: teclas, medidas y estilo
+src/jd/piano/instrumentos/ los instrumentos y lo que comparten
+src/jd/piano/teclas/     el teclado: teclas, medidas y estilo
   Tecla, TeclaBlanca1/2/3, TeclaNegra     una tecla y sus formas
   Piano                                   teclado abstracto
   MedidasTeclado, LayoutTeclados          tamaños y reparto en pantalla
@@ -128,7 +180,7 @@ src/jd/piano/programa/   la aplicación
   Escena, Lienzo, VentanaPrincipal        dibujado y ventana
   Cascada, Particulas, Bateria            capas animadas
   PantallaInicio                          el menu de inicio
-  ModoDeUso, BarraDeMenu                  los cuatro modos y el menu
+  ModoDeUso, BarraDeMenu                  los cinco modos y el menu
   ModoAprendizaje                         esperar la nota correcta
   RastroLibre                             el rastro del modo libre
   Partitura, AnalisisMidi, Reproductor    el MIDI
@@ -154,7 +206,7 @@ se llegaría a 60 fps.
 .\probar.ps1
 ```
 
-96 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+164 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -175,10 +227,21 @@ puede romper sin darse cuenta:
   barra de progreso no hacía nada, y ninguna comprobación lo cubría.
 - El mapa completo de percusión y el montaje de los pads.
 - Que el modo aprendizaje pare al llegar a un acorde y siga al tocarlo.
-- Que los cuatro modos sean coherentes: no puede haber notas cayendo sin
-  canción ni con varios teclados a la vez.
+- Que los cinco modos sean coherentes: no puede haber notas cayendo sin
+  canción, ni con varios teclados, ni con varios instrumentos apilados.
 - Que el rastro del modo libre aparezca al tocar.
-- Que la pantalla de inicio se pinte y que cada tarjeta elija su modo.
+- Que la pantalla de inicio se pinte y que cada tarjeta elija su modo, sin que
+  ninguna pise a otra. La posición se le pregunta a la pantalla en vez de
+  repetir aquí la cuenta de la rejilla, que es justo lo que se quedó viejo al
+  añadir el quinto modo.
+- Que en el mástil **cada nota caiga siempre en el mismo traste**, y que sea el
+  más bajo posible.
+- Que las barras del xilófono no se pisen y se vayan acortando al subir.
+- Que el círculo lleve bien **la cuenta de cuántas notas de cada clase están
+  sonando**: si suenan dos Do y se suelta uno, el nodo tiene que seguir
+  encendido. Es el fallo fácil de ese instrumento.
+- Que el reparto de canales **no pierda nada que un teclado solo sí mostraría**,
+  y que los instrumentos apilados no se pisen.
 
 Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
 suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.

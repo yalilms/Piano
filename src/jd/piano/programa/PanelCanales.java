@@ -30,10 +30,24 @@ public class PanelCanales extends JPanel {
     private final List<JCheckBox> interruptores = new ArrayList<>();
     private final List<Integer> canales = new ArrayList<>();
 
+    /** Puesto solo en el modo de varios instrumentos. Null en los demas. */
+    private Conjunto conjunto;
+    private Runnable alReasignar;
+
     public PanelCanales(Reproductor reproductor) {
         this.reproductor = reproductor;
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setBorder(BorderFactory.createEmptyBorder(4, 2, 4, 2));
+    }
+
+    /**
+     * En el modo de varios instrumentos, cada canal lleva ademas un desplegable
+     * para mandarlo a otro instrumento. Hay que llamarlo antes de mostrar, y con
+     * null para volver a las filas de una sola linea.
+     */
+    public void setConjunto(Conjunto conjunto, Runnable alReasignar) {
+        this.conjunto = conjunto;
+        this.alReasignar = alReasignar;
     }
 
     /** Rehace la lista para la cancion que se acaba de cargar. */
@@ -120,6 +134,43 @@ public class PanelCanales extends JPanel {
         fila.add(izquierda, BorderLayout.WEST);
         fila.add(selector, BorderLayout.CENTER);
         fila.add(solo, BorderLayout.EAST);
+
+        if (this.conjunto == null) {
+            return fila;
+        }
+        // Dos lineas: arriba que suena, abajo donde se ve. No caben en una sola
+        JPanel doble = new JPanel(new BorderLayout(0, 1));
+        doble.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
+        doble.add(fila, BorderLayout.NORTH);
+        doble.add(crearSelectorVisual(canal), BorderLayout.SOUTH);
+        return doble;
+    }
+
+    /** Desplegable de "se ve en", para mover un canal a otro instrumento. */
+    private JPanel crearSelectorVisual(int canal) {
+        JComboBox<TipoInstrumento> visual =
+                new JComboBox<>(TipoInstrumento.values());
+        TipoInstrumento actual = this.conjunto.getTipoDe(canal);
+        if (actual != null) {
+            visual.setSelectedItem(actual);
+        }
+        visual.setToolTipText("Canal " + (canal + 1)
+                + ": en que instrumento se dibuja esta pista");
+        visual.addActionListener(e -> {
+            Object elegido = visual.getSelectedItem();
+            if (elegido instanceof TipoInstrumento tipo) {
+                this.conjunto.asignar(canal, tipo);
+                if (this.alReasignar != null) {
+                    this.alReasignar.run();
+                }
+            }
+        });
+
+        JLabel etiqueta = new JLabel("  se ve en ");
+        etiqueta.setFont(etiqueta.getFont().deriveFont(11f));
+        JPanel fila = new JPanel(new BorderLayout(2, 0));
+        fila.add(etiqueta, BorderLayout.WEST);
+        fila.add(visual, BorderLayout.CENTER);
         return fila;
     }
 

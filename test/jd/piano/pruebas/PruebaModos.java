@@ -10,6 +10,7 @@ import jd.piano.teclas.Estilo;
 import jd.piano.teclas.Piano;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -32,7 +33,7 @@ public final class PruebaModos {
     }
 
     private static void modos(Comprobador c) {
-        c.comprobar("hay cuatro modos de uso", ModoDeUso.values().length == 4);
+        c.comprobar("hay cinco modos de uso", ModoDeUso.values().length == 5);
 
         boolean conNombre = true;
         for (ModoDeUso m : ModoDeUso.values()) {
@@ -41,30 +42,48 @@ public final class PruebaModos {
         }
         c.comprobar("todos tienen nombre y explicacion", conNombre);
 
-        c.comprobar("solo el modo libre no necesita cancion",
-                !ModoDeUso.TOCAR_LIBRE.necesitaCancion()
-                        && ModoDeUso.VER_CANCION.necesitaCancion()
-                        && ModoDeUso.VER_CANALES.necesitaCancion()
-                        && ModoDeUso.APRENDER.necesitaCancion());
+        boolean soloLibreSinCancion = !ModoDeUso.TOCAR_LIBRE.necesitaCancion();
+        for (ModoDeUso m : ModoDeUso.values()) {
+            soloLibreSinCancion = soloLibreSinCancion
+                    && (m == ModoDeUso.TOCAR_LIBRE || m.necesitaCancion());
+        }
+        c.comprobar("solo el modo libre no necesita cancion", soloLibreSinCancion);
 
-        c.comprobar("solo ver por canales dibuja un teclado por canal",
-                ModoDeUso.VER_CANALES.esPorCanales()
-                        && !ModoDeUso.VER_CANCION.esPorCanales()
-                        && !ModoDeUso.APRENDER.esPorCanales()
-                        && !ModoDeUso.TOCAR_LIBRE.esPorCanales());
+        boolean soloCanales = ModoDeUso.VER_CANALES.esPorCanales();
+        for (ModoDeUso m : ModoDeUso.values()) {
+            soloCanales = soloCanales
+                    && (m == ModoDeUso.VER_CANALES || !m.esPorCanales());
+        }
+        c.comprobar("solo ver por canales dibuja un teclado por canal", soloCanales);
 
-        // La cascada necesita un solo teclado y una cancion: ni el modo por
-        // canales ni el libre la pueden tener
+        c.comprobar("solo el modo de varios reparte los canales",
+                ModoDeUso.CONJUNTO.esConjunto()
+                        && !ModoDeUso.VER_CANCION.esConjunto()
+                        && !ModoDeUso.VER_CANALES.esConjunto());
+
+        // El selector de "Ver como" solo manda donde el modo no elige el
+        // instrumento por su cuenta
+        c.comprobar("el instrumento se elige a mano solo donde tiene sentido",
+                ModoDeUso.VER_CANCION.eligeInstrumento()
+                        && ModoDeUso.APRENDER.eligeInstrumento()
+                        && ModoDeUso.TOCAR_LIBRE.eligeInstrumento()
+                        && !ModoDeUso.VER_CANALES.eligeInstrumento()
+                        && !ModoDeUso.CONJUNTO.eligeInstrumento());
+
+        // La cascada necesita un solo instrumento pegado abajo y una cancion:
+        // ni el modo por canales, ni el libre, ni el de varios apilados
         c.comprobar("la cascada solo esta donde cabe",
                 ModoDeUso.VER_CANCION.tieneCascada()
                         && ModoDeUso.APRENDER.tieneCascada()
                         && !ModoDeUso.VER_CANALES.tieneCascada()
+                        && !ModoDeUso.CONJUNTO.tieneCascada()
                         && !ModoDeUso.TOCAR_LIBRE.tieneCascada());
 
         boolean coherente = true;
         for (ModoDeUso m : ModoDeUso.values()) {
-            // No puede haber cascada sin cancion, ni con varios teclados
-            if (m.tieneCascada() && (!m.necesitaCancion() || m.esPorCanales())) {
+            // No puede haber cascada sin cancion, ni con varios instrumentos
+            if (m.tieneCascada()
+                    && (!m.necesitaCancion() || m.esPorCanales() || m.esConjunto())) {
                 coherente = false;
             }
         }
@@ -98,15 +117,19 @@ public final class PruebaModos {
         }
         c.comprobar("la pantalla de inicio se pinta", distintos >= 2);
 
-        // Un clic en el centro de cada tarjeta debe avisar de su modo. Las
-        // posiciones salen de la misma rejilla de dos columnas que dibuja.
+        // Un clic en el centro de cada tarjeta debe avisar de su modo. La
+        // posicion se le pregunta a la pantalla: repetir aqui la cuenta de la
+        // rejilla es lo que se quedo viejo al anadir el quinto modo.
+        boolean sinCaja = false;
         for (ModoDeUso modo : ModoDeUso.values()) {
             elegidos.clear();
-            int indice = modo.ordinal();
-            int columna = indice % 2;
-            int fila = indice / 2;
-            int x = 40 + columna * ((1000 - 80) / 2) + 100;
-            int y = 132 + (640 - 132 - 40 - 2 * 118 - 18) / 2 + fila * (118 + 18) + 59;
+            Rectangle caja = pantalla.cajaDe(modo);
+            if (caja == null) {
+                sinCaja = true;
+                continue;
+            }
+            int x = caja.x + caja.width / 2;
+            int y = caja.y + caja.height / 2;
             pantalla.dispatchEvent(new MouseEvent(pantalla, MouseEvent.MOUSE_CLICKED,
                     System.currentTimeMillis(), 0, x, y, 1, false));
             boolean acierta = elegidos.size() == 1 && elegidos.get(0) == modo;
@@ -117,6 +140,19 @@ public final class PruebaModos {
             c.comprobar("la tarjeta de " + modo.getNombre() + " elige su modo",
                     acierta);
         }
+        c.comprobar("las cinco tarjetas tienen sitio en la pantalla", !sinCaja);
+
+        // Y ninguna se pisa con otra, que si no un clic elegiria el modo vecino
+        boolean sePisan = false;
+        ModoDeUso[] todos = ModoDeUso.values();
+        for (int i = 0; i < todos.length; i++) {
+            for (int j = i + 1; j < todos.length; j++) {
+                Rectangle a = pantalla.cajaDe(todos[i]);
+                Rectangle b = pantalla.cajaDe(todos[j]);
+                sePisan = sePisan || (a != null && b != null && a.intersects(b));
+            }
+        }
+        c.comprobar("ninguna tarjeta pisa a otra", !sePisan);
 
         elegidos.clear();
         pantalla.dispatchEvent(new MouseEvent(pantalla, MouseEvent.MOUSE_CLICKED,

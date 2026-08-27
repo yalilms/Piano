@@ -134,11 +134,32 @@ public class PantallaInicio extends JPanel {
         for (int i = 0; i < this.tarjetas.size(); i++) {
             int fila = i / COLUMNAS;
             int columna = i % COLUMNAS;
+            // La ultima fila puede ir a medias: se centra en vez de quedarse
+            // pegada a la izquierda con un hueco al lado
+            int enLaFila = Math.min(COLUMNAS, this.tarjetas.size() - fila * COLUMNAS);
+            int anchoFila = enLaFila * ancho + (enLaFila - 1) * SEPARACION;
+            int izquierda = MARGEN + (disponibleAncho - anchoFila) / 2;
             this.tarjetas.get(i).caja = new Rectangle(
-                    MARGEN + columna * (ancho + SEPARACION),
+                    izquierda + columna * (ancho + SEPARACION),
                     arriba + fila * (alto + SEPARACION),
                     ancho, alto);
         }
+    }
+
+    /**
+     * Donde ha quedado la tarjeta de ese modo, o null si aun no cabe ninguna.
+     * Lo usa la prueba del raton: preguntando no tiene que repetir la cuenta de
+     * la rejilla, que es justo lo que se le queda viejo al anadir un modo.
+     */
+    public Rectangle cajaDe(ModoDeUso modo) {
+        recolocar();
+        Rectangle caja = null;
+        for (Tarjeta t : this.tarjetas) {
+            if (t.modo == modo && t.caja != null) {
+                caja = new Rectangle(t.caja);
+            }
+        }
+        return caja;
     }
 
     @Override
@@ -297,12 +318,57 @@ public class PantallaInicio extends JPanel {
                 g.fillPolygon(new int[]{cx - lado / 2, cx + lado / 2, cx},
                         new int[]{puntaY - lado, puntaY - lado, puntaY}, 3);
             }
+            case CONJUNTO -> {
+                // Un mastil arriba, unas barras de xilofono en medio y un
+                // teclado abajo: los tres a la vez, que es de lo que va el modo
+                int tercio = alto / 3;
+                dibujarMastilDecorativo(g, x, y, ancho, tercio - 3);
+                dibujarBarrasDecorativas(g, x, y + tercio, ancho, tercio - 3);
+                dibujarTeclasDecorativas(g, x, y + 2 * tercio, ancho,
+                        alto - 2 * tercio);
+            }
             case TOCAR_LIBRE -> {
                 barras(g, x, y, ancho, alto - altoTeclas - 3, new int[]{2, 4, 6},
                         Estilo.COLOR_USUARIO, true);
                 dibujarTeclasDecorativas(g, x, yTeclas, ancho, altoTeclas);
             }
             default -> dibujarTeclasDecorativas(g, x, yTeclas, ancho, altoTeclas);
+        }
+    }
+
+    /** Cuatro cuerdas y unos trastes, para el glifo del conjunto. */
+    private void dibujarMastilDecorativo(Graphics2D g, int x, int y,
+                                         int ancho, int alto) {
+        g.setColor(new Color(58, 34, 20, 220));
+        g.fill(new RoundRectangle2D.Double(x, y, ancho, alto, 3, 3));
+        g.setColor(new Color(168, 160, 148, 190));
+        for (int i = 1; i <= 4; i++) {
+            int tx = x + i * ancho / 5;
+            g.drawLine(tx, y, tx, y + alto);
+        }
+        for (int i = 1; i <= 3; i++) {
+            int ty = y + i * alto / 4;
+            g.drawLine(x, ty, x + ancho, ty);
+        }
+        g.setColor(Estilo.colorDeCanal(3));
+        int cx = x + 2 * ancho / 5 + ancho / 10;
+        int cy = y + 2 * alto / 4;
+        int r = Math.max(2, alto / 8);
+        g.fill(new java.awt.geom.Ellipse2D.Double(cx - r, cy - r, r * 2, r * 2));
+    }
+
+    /** Barras de madera de mayor a menor, para el glifo del conjunto. */
+    private void dibujarBarrasDecorativas(Graphics2D g, int x, int y,
+                                          int ancho, int alto) {
+        int cuantas = 9;
+        double paso = ancho / (double) cuantas;
+        for (int i = 0; i < cuantas; i++) {
+            double largo = alto * (1.0 - 0.5 * i / (cuantas - 1.0));
+            double by = y + (alto - largo) / 2;
+            g.setColor(i == 3 ? Estilo.colorDeCanal(1)
+                    : new Color(158, 96, 56, 225));
+            g.fill(new RoundRectangle2D.Double(x + i * paso + 1, by,
+                    paso - 2, largo, 2, 2));
         }
     }
 
@@ -331,7 +397,7 @@ public class PantallaInicio extends JPanel {
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
         FontMetrics m = g.getFontMetrics();
         String pie = "Tambien puedes arrastrar un fichero .mid sobre la ventana"
-                + "   -   Ctrl+1 a Ctrl+4 para cambiar de modo";
+                + "   -   " + BarraDeMenu.atajosDeModo() + " para cambiar de modo";
         g.setColor(new Color(178, 162, 140));
         g.drawString(pie, (getWidth() - m.stringWidth(pie)) / 2, getHeight() - 14);
     }

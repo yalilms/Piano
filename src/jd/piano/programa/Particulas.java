@@ -36,10 +36,18 @@ public class Particulas implements CapaSuperpuesta {
     /** Semilla propia: el aspecto no depende del reloj y es reproducible. */
     private long semilla = 987654321L;
 
+    /** El instrumento del frame anterior, para vaciar el mapa al cambiarlo. */
+    private InstrumentoVisual ultimo = null;
+
     @Override
     public void dibujar(Graphics2D g, InstrumentoVisual instrumento) {
         if (instrumento == null) {
             return;
+        }
+        if (instrumento != this.ultimo) {
+            // Si no, el mapa se queda con las piezas del instrumento anterior
+            this.vistas.clear();
+            this.ultimo = instrumento;
         }
         long ahora = System.currentTimeMillis();
         detectarGolpes(instrumento, ahora);

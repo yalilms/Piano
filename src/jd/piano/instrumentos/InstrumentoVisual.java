@@ -87,4 +87,24 @@ public interface InstrumentoVisual extends ElementoVisual {
 
     /** La pieza que hay en ese punto, o null. Sirve para tocar con el raton. */
     PiezaPulsable piezaEn(int x, int y);
+
+    /**
+     * Si tiene sentido que le caigan notas desde arriba. Casi todos dicen que
+     * si: las piezas estan en una franja y las barras bajan hasta ella. El
+     * circulo cromatico dice que no, porque sus notas estan repartidas por toda
+     * una rueda y las barras la cruzarian por encima para llegar a las de abajo.
+     */
+    default boolean admiteCascada() {
+        return true;
+    }
+
+    /**
+     * Si debajo se pinta la tapa laqueada con su reflejo. Vale para lo que se
+     * apoya en algo (un teclado, un xilofono, un mastil); no para lo que no,
+     * como el circulo cromatico, donde la franja oscura salia cruzando la
+     * madera por la mitad y cortando la rueda.
+     */
+    default boolean tieneReflejo() {
+        return true;
+    }
 }

@@ -44,7 +44,7 @@ public class BarraDeMenu extends JMenuBar {
         for (ModoDeUso modo : ModoDeUso.values()) {
             JRadioButtonMenuItem opcion = new JRadioButtonMenuItem(modo.getNombre());
             opcion.setToolTipText(modo.getExplicacion());
-            // Ctrl+1 a Ctrl+4 para cambiar de modo sin soltar el teclado
+            // Ctrl+1 en adelante para cambiar de modo sin soltar el teclado
             opcion.setAccelerator(KeyStroke.getKeyStroke(
                     KeyEvent.VK_0 + numero, InputEvent.CTRL_DOWN_MASK));
             opcion.addActionListener(e -> alCambiarModo.accept(modo));
@@ -114,6 +114,14 @@ public class BarraDeMenu extends JMenuBar {
     }
 
     /** Texto de ayuda de los controles, para el menu Ayuda. */
+    /**
+     * "Ctrl+1 a Ctrl+5", contado a partir de los modos que hay. Escrito a mano
+     * se quedaba viejo cada vez que se anadia uno.
+     */
+    public static String atajosDeModo() {
+        return "Ctrl+1 a Ctrl+" + ModoDeUso.values().length;
+    }
+
     public static String textoDeAyuda() {
         return "<html><h3>Controles</h3>"
                 + "<p><b>Clic en el piano</b> le da el foco al teclado.</p>"
@@ -128,7 +136,7 @@ public class BarraDeMenu extends JMenuBar {
                 + "<td>pausa, o pedal de resonancia en el modo libre</td></tr>"
                 + "<tr><td>Clic y arrastre en las teclas</td>"
                 + "<td>tocar con el raton</td></tr>"
-                + "<tr><td>Ctrl+1 a Ctrl+4</td><td>cambiar de modo</td></tr>"
+                + "<tr><td>" + atajosDeModo() + "</td><td>cambiar de modo</td></tr>"
                 + "</table>"
                 + "<p>El Do central sale marcado en rojo: es el <b>"
                 + Estilo.etiquetaDe(Estilo.DO_CENTRAL) + "</b>.</p>"

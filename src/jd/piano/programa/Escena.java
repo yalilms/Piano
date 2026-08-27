@@ -168,7 +168,8 @@ public class Escena {
         Graphics2D g = this.escenarioSinTeclas.createGraphics();
         aplicarCalidad(g);
         dibujarFondo(g);
-        if (this.instrumento != null && this.instrumento.getLimites() != null && capaReposo != null) {
+        if (this.instrumento != null && this.instrumento.getLimites() != null
+                && capaReposo != null && this.instrumento.tieneReflejo()) {
             dibujarTapaConReflejo(g, this.instrumento.getLimites(), capaReposo);
         }
         g.dispose();

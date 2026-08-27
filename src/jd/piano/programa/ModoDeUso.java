@@ -14,6 +14,9 @@ public enum ModoDeUso {
     VER_CANALES("Ver por canales",
             "Un teclado por cada canal de la cancion"),
 
+    CONJUNTO("Varios instrumentos",
+            "Cada pista en el instrumento que le pega, todos a la vez"),
+
     APRENDER("Aprender a tocarla",
             "Se para y espera a que toques la nota que viene"),
 
@@ -46,9 +49,23 @@ public enum ModoDeUso {
         return this == VER_CANALES;
     }
 
-    /** Si las notas caen desde arriba. */
+    /**
+     * Si las notas caen desde arriba. En el modo de varios instrumentos no:
+     * los instrumentos van apilados, y la barra de una nota del de abajo
+     * tendria que atravesar el de arriba para llegar a su sitio.
+     */
     public boolean tieneCascada() {
         return this == VER_CANCION || this == APRENDER;
+    }
+
+    /** Si reparte los canales entre varios instrumentos distintos. */
+    public boolean esConjunto() {
+        return this == CONJUNTO;
+    }
+
+    /** Si el instrumento lo elige el usuario en "Ver como". */
+    public boolean eligeInstrumento() {
+        return !esPorCanales() && !esConjunto();
     }
 
     @Override

@@ -29,10 +29,15 @@ public final class AnalisisMidi {
     private final int[] programaPorCanal;
     private final List<Integer> percusionUsada;
     private final int totalPercusion;
+    private final int[] minimaPorCanal;
+    private final int[] maximaPorCanal;
+    private final int[] notasPorCanal;
 
     private AnalisisMidi(List<Integer> canalesUsados, int notaMinima,
                          int notaMaxima, int totalNotas, int[] programaPorCanal,
-                         List<Integer> percusionUsada, int totalPercusion) {
+                         List<Integer> percusionUsada, int totalPercusion,
+                         int[] minimaPorCanal, int[] maximaPorCanal,
+                         int[] notasPorCanal) {
         this.canalesUsados = canalesUsados;
         this.notaMinima = notaMinima;
         this.notaMaxima = notaMaxima;
@@ -40,6 +45,9 @@ public final class AnalisisMidi {
         this.programaPorCanal = programaPorCanal;
         this.percusionUsada = percusionUsada;
         this.totalPercusion = totalPercusion;
+        this.minimaPorCanal = minimaPorCanal;
+        this.maximaPorCanal = maximaPorCanal;
+        this.notasPorCanal = notasPorCanal;
     }
 
     public static AnalisisMidi de(String ruta) throws Exception {
@@ -47,6 +55,13 @@ public final class AnalisisMidi {
         boolean[] vistos = new boolean[CANALES];
         int[] programa = new int[CANALES];
         boolean[] percusion = new boolean[128];
+        // Rango de cada canal por separado: hace falta para repartir los
+        // canales entre varios instrumentos y saber si a cada uno le cabe el suyo
+        int[] minimaCanal = new int[CANALES];
+        int[] maximaCanal = new int[CANALES];
+        int[] notasCanal = new int[CANALES];
+        java.util.Arrays.fill(minimaCanal, Integer.MAX_VALUE);
+        java.util.Arrays.fill(maximaCanal, Integer.MIN_VALUE);
         int golpes = 0;
         int minima = Integer.MAX_VALUE;
         int maxima = Integer.MIN_VALUE;
@@ -73,9 +88,13 @@ public final class AnalisisMidi {
                 }
                 boolean esNota = suena && sm.getChannel() != CANAL_PERCUSION;
                 if (esNota) {
-                    vistos[sm.getChannel()] = true;
+                    int canal = sm.getChannel();
+                    vistos[canal] = true;
                     minima = Math.min(minima, sm.getData1());
                     maxima = Math.max(maxima, sm.getData1());
+                    minimaCanal[canal] = Math.min(minimaCanal[canal], sm.getData1());
+                    maximaCanal[canal] = Math.max(maximaCanal[canal], sm.getData1());
+                    notasCanal[canal]++;
                     total++;
                 }
             }
@@ -100,7 +119,7 @@ public final class AnalisisMidi {
             }
         }
         return new AnalisisMidi(canales, minima, maxima, total, programa,
-                piezas, golpes);
+                piezas, golpes, minimaCanal, maximaCanal, notasCanal);
     }
 
     public List<Integer> getCanalesUsados() {
@@ -126,6 +145,29 @@ public final class AnalisisMidi {
             programa = this.programaPorCanal[canal];
         }
         return programa;
+    }
+
+    /**
+     * Nota mas grave de ese canal, o -1 si el canal no toca nada. Con el rango
+     * por canal se puede decidir si a una pista le cabe una guitarra o hay que
+     * darle un teclado.
+     */
+    public int getNotaMinimaDe(int canal) {
+        return valido(canal) && this.notasPorCanal[canal] > 0
+                ? this.minimaPorCanal[canal] : -1;
+    }
+
+    public int getNotaMaximaDe(int canal) {
+        return valido(canal) && this.notasPorCanal[canal] > 0
+                ? this.maximaPorCanal[canal] : -1;
+    }
+
+    public int getNotasDe(int canal) {
+        return valido(canal) ? this.notasPorCanal[canal] : 0;
+    }
+
+    private boolean valido(int canal) {
+        return canal >= 0 && canal < CANALES;
     }
 
     /** Notas de percusion que usa la cancion, o vacia si no tiene bateria. */

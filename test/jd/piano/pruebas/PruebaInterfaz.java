@@ -102,6 +102,22 @@ public final class PruebaInterfaz {
                 new ListaCanciones("canciones").getNumeroCanciones() > 0);
         c.comprobar("un recurso inexistente devuelve null",
                 Recursos.buscar("no-existe-esto.xyz") == null);
+
+        // Instalado en Program Files no se puede escribir al lado del programa,
+        // asi que la carpeta de capturas tiene que salir siempre utilizable
+        File capturas = Recursos.carpetaDeCapturas();
+        c.dato("carpeta de capturas: " + capturas.getPath());
+        boolean sirve = false;
+        try {
+            File prueba = new File(capturas, ".prueba-de-la-prueba");
+            sirve = capturas.isDirectory() && prueba.createNewFile()
+                    && prueba.delete();
+        } catch (Exception error) {
+            sirve = false;
+        }
+        c.comprobar("la carpeta de capturas existe y se puede escribir", sirve);
+        c.comprobar("desde el proyecto las capturas van al lado del programa",
+                capturas.getName().equals("capturas"));
     }
 
     private static void tecladoDelOrdenador(Comprobador c) {

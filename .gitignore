@@ -41,3 +41,7 @@ out-test/
 
 ### Icono generado ###
 piano.ico
+
+### Lo que genera crear-instalador.ps1 ###
+build/
+dist/

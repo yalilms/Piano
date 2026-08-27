@@ -200,13 +200,43 @@ pre-componen en dos imágenes, y en cada frame solo se repintan las zonas donde
 hay teclas encendidas. Sin eso no habría animación posible, y con 88 teclas no
 se llegaría a 60 fps.
 
+## 📦 Pasárselo a alguien
+
+```powershell
+.\crear-instalador.ps1
+```
+
+Deja en `dist\` una carpeta `Piano MIDI` con su `Piano MIDI.exe`, y el mismo
+contenido comprimido en `Piano-MIDI.zip` (**33 MB**). Quien lo reciba
+descomprime y hace doble clic: **no hace falta tener Java instalado**, ni
+permisos de administrador, ni instalar nada.
+
+El paquete lleva su propio Java dentro, recortado a los módulos que se usan. Sin
+recortar, `jpackage` mete el JDK entero y son 154 MB en vez de 48.
+
+Un instalador `.msi` de verdad —con entrada en el menú Inicio y desinstalador—
+necesita [WiX Toolset](https://wixtoolset.org/), que pide permisos de
+administrador y .NET Framework 3.5:
+
+```powershell
+winget install WiXToolset.WiXToolset   # en una consola de administrador
+```
+
+Con WiX instalado basta cambiar `$tipo` a `'msi'` en la primera parte del script.
+
+### Dónde se guardan las capturas
+
+Ejecutándolo desde el proyecto, en `capturas\` al lado. Empaquetado, en
+`%USERPROFILE%\Piano MIDI`, porque el programa puede acabar en `Program Files`,
+donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
+
 ## ✅ Comprobaciones
 
 ```powershell
 .\probar.ps1
 ```
 
-164 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+166 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar

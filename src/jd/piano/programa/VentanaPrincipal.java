@@ -540,9 +540,10 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     @Override
     public void capturar() {
         try {
-            File carpeta = new File("capturas");
-            if (!carpeta.exists() && !carpeta.mkdirs()) {
-                throw new IOException("no puedo crear la carpeta capturas");
+            File carpeta = Recursos.carpetaDeCapturas();
+            if (!carpeta.isDirectory() && !carpeta.mkdirs()) {
+                throw new IOException(
+                        "no puedo crear la carpeta " + carpeta.getPath());
             }
             String sello = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
                     .format(LocalDateTime.now());

@@ -36,3 +36,5 @@ lib/*.jar
 
 ### Capturas que exporta el programa ###
 capturas/
+
+out-test/

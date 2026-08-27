@@ -100,6 +100,32 @@ pre-componen en dos imágenes, y en cada frame solo se repintan las zonas donde
 hay teclas encendidas. Sin eso no habría animación posible, y con 88 teclas no
 se llegaría a 60 fps.
 
+## ✅ Comprobaciones
+
+```powershell
+.\probar.ps1
+```
+
+57 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+puede romper sin darse cuenta:
+
+- Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
+  huecos. Es el invariante que ya se rompió una vez: `TeclaBlanca2` y `3`
+  enumeraban vértices a mano y una coordenada mal metía una cuña blanca encima
+  de la tecla negra vecina.
+- Que el clic acierte la tecla, **barriendo los 129 074 puntos** de la
+  superficie del teclado uno a uno.
+- Que la conversión de pulsos a tiempo cuadre con la duración que declara Java,
+  incluso en las canciones que cambian de tempo. Si se desviara, las notas
+  cayendo se irían desincronizando.
+- Que no se pierda ninguna nota al leer el fichero.
+- El transporte entero: pausa, saltos con sus límites, tempo acotado.
+- Que no queden notas encendidas para siempre, por ninguna de las tres vías por
+  las que pasaba.
+
+Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
+suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.
+
 ## 📷 Capturas
 
 El botón **Captura** guarda lo que se ve en `capturas/` como PNG.

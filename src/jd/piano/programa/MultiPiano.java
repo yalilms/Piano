@@ -133,6 +133,16 @@ public class MultiPiano extends Piano {
     }
 
     @Override
+    public void soltarCanal(int canal) {
+        if (canal >= 0 && canal < CANALES_MIDI) {
+            int indice = this.indicePorCanal[canal];
+            if (indice >= 0) {
+                this.pianos.get(indice).soltarTodas();
+            }
+        }
+    }
+
+    @Override
     public Tecla teclaEn(int x, int y) {
         Tecla encontrada = null;
         for (int i = 0; i < this.pianos.size() && encontrada == null; i++) {

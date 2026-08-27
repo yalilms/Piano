@@ -40,6 +40,13 @@ public abstract class Piano implements ElementoVisual {
     public abstract void soltarTodas();
 
     /**
+     * Suelta las teclas de un canal concreto. En el piano sencillo todos los
+     * canales comparten teclado y no se puede distinguir, asi que suelta
+     * todas; en el multipiano solo toca el teclado de ese canal.
+     */
+    public abstract void soltarCanal(int canal);
+
+    /**
      * La tecla que hay en ese punto, o null si no hay ninguna. Sale gratis de
      * tener las teclas como formas: basta preguntarle si contiene el punto.
      * Las negras se comprueban antes porque estan encima.

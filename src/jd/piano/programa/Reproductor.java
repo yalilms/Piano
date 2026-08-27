@@ -73,8 +73,8 @@ public class Reproductor implements Receiver {
         this.silenciado[canal] = silencio;
         aplicarSilencio(canal);
         if (silencio && this.piano != null) {
-            // Las teclas que estuvieran encendidas de ese canal se apagan ya
-            this.piano.soltarTodas();
+            // Solo las de ese canal: soltarTodas apagaba tambien las de los demas
+            this.piano.soltarCanal(canal);
         }
     }
 
@@ -106,6 +106,12 @@ public class Reproductor implements Receiver {
         this.transmisor.setReceiver(this);
         this.duracionUs = secuencia.getMicrosecondLength();
         this.notasTocadas = 0;
+        // Los silenciados no se arrastran de una cancion a otra: el panel de
+        // canales se rehace con todo activado y quedarian descuadrados.
+        for (int canal = 0; canal < this.silenciado.length; canal++) {
+            this.silenciado[canal] = false;
+            aplicarSilencio(canal);
+        }
     }
 
     /** Cuantas notas han sonado desde que se cargo la cancion. */
@@ -208,10 +214,19 @@ public class Reproductor implements Receiver {
             return;
         }
         int canal = sm.getChannel();
-        if (canal == CANAL_PERCUSION || this.silenciado[canal]) {
+        if (canal == CANAL_PERCUSION) {
             return;
         }
         int comando = sm.getCommand();
+
+        // Un canal silenciado no enciende nada, pero los apagados si pasan: si
+        // no, una nota que estuviera sonando al silenciarlo se quedaba
+        // encendida para siempre.
+        boolean apaga = comando == ShortMessage.NOTE_OFF
+                || (comando == ShortMessage.NOTE_ON && sm.getData2() == 0);
+        if (this.silenciado[canal] && !apaga) {
+            return;
+        }
 
         // Muchos MIDI apagan las notas con este controlador en vez de con
         // NOTE_OFF. Sin atenderlo se quedaban teclas encendidas para siempre.

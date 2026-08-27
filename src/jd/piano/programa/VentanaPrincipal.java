@@ -17,6 +17,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
+import javax.swing.Timer;
 import javax.swing.TransferHandler;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -24,6 +25,8 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -55,6 +58,7 @@ public class VentanaPrincipal extends JFrame {
     private final JLabel etiquetaInfo;
     private final SintetizadorTeclado sintetizador;
     private final PanelCanales panelCanales;
+    private final JCheckBox encadenar;
     private String rutaActual;
     private Cascada cascada;
 
@@ -100,6 +104,9 @@ public class VentanaPrincipal extends JFrame {
         this.etiquetaInfo = new JLabel("Elige una cancion");
         this.etiquetaInfo.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
+        this.encadenar = new JCheckBox("Encadenar canciones", true);
+        this.encadenar.setToolTipText("Al acabar, pasa a la siguiente de la lista");
+
         JCheckBox verNombres = new JCheckBox("Nombres de nota", true);
         verNombres.setToolTipText("Ensena la nota en cada tecla blanca");
         verNombres.addActionListener(e -> {
@@ -109,9 +116,13 @@ public class VentanaPrincipal extends JFrame {
             this.escena.prepararCaches();
         });
 
+        JPanel casillas = new JPanel(new BorderLayout());
+        casillas.add(verNombres, BorderLayout.NORTH);
+        casillas.add(this.encadenar, BorderLayout.SOUTH);
+
         JPanel arriba = new JPanel(new BorderLayout(0, 4));
         arriba.add(this.selectorModo, BorderLayout.NORTH);
-        arriba.add(verNombres, BorderLayout.SOUTH);
+        arriba.add(casillas, BorderLayout.SOUTH);
 
         JPanel lateral = new JPanel(new BorderLayout(0, 6));
         lateral.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 4));
@@ -132,6 +143,8 @@ public class VentanaPrincipal extends JFrame {
                 BorderLayout.SOUTH);
 
         habilitarArrastrarYSoltar();
+        vigilarElFinal();
+        cerrarBienAlSalir();
 
         setIconImages(Iconos.deLaAplicacion());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -192,6 +205,45 @@ public class VentanaPrincipal extends JFrame {
                     }
                 }
                 return alguno;
+            }
+        });
+    }
+
+    /**
+     * Cuando la cancion se acaba, la ventana se quedaba en un callejon sin
+     * salida: la barra al final y nada mas. Ahora pasa a la siguiente, o se
+     * queda parada limpiamente si esta desmarcado el encadenado.
+     */
+    private void vigilarElFinal() {
+        new Timer(400, e -> {
+            if (this.rutaActual != null && this.reproductor.haTerminado()) {
+                if (this.encadenar.isSelected()) {
+                    siguienteCancion();
+                } else {
+                    this.reproductor.parar();
+                }
+            }
+        }).start();
+    }
+
+    private void siguienteCancion() {
+        int cuantas = this.modeloCanciones.size();
+        if (cuantas == 0) {
+            return;
+        }
+        int siguiente = (this.listaCanciones.getSelectedIndex() + 1) % cuantas;
+        // setSelectedIndex dispara el listener, que ya carga y reproduce
+        this.listaCanciones.setSelectedIndex(siguiente);
+        this.listaCanciones.ensureIndexIsVisible(siguiente);
+    }
+
+    /** Suelta el secuenciador y el sintetizador al cerrar la ventana. */
+    private void cerrarBienAlSalir() {
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                VentanaPrincipal.this.reproductor.cerrar();
+                VentanaPrincipal.this.sintetizador.cerrar();
             }
         });
     }

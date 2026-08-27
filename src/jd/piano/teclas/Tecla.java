@@ -28,11 +28,17 @@ public abstract class Tecla implements Pulsable {
     protected Point posicion;
     protected MedidasTeclado medidas;
     private final int nota;
-    private boolean pulsada;
-    private int velocidad;
-    private Color colorPulsada;
-    private long instanteSuelte;
-    private long instantePulsacion;
+
+    /*
+     * Estos cinco los escribe el hilo del MIDI (o el del teclado) y los lee el
+     * hilo de Swing al pintar. Con volatile la lectura ve siempre el ultimo
+     * valor escrito; sin el, un frame podia quedarse con estado viejo.
+     */
+    private volatile boolean pulsada;
+    private volatile int velocidad;
+    private volatile Color colorPulsada;
+    private volatile long instanteSuelte;
+    private volatile long instantePulsacion;
 
     /**
      * Construir la forma cuesta (son operaciones de Area), y a 60 fps se pide

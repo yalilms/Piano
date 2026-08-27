@@ -120,6 +120,15 @@ public class PianoSencillo extends Piano {
         }
     }
 
+    /**
+     * Aqui todos los canales comparten las mismas teclas, asi que no se puede
+     * soltar uno solo: se sueltan todas.
+     */
+    @Override
+    public void soltarCanal(int canal) {
+        soltarTodas();
+    }
+
     @Override
     public Tecla teclaEn(int x, int y) {
         Tecla encontrada = buscar(x, y, false);

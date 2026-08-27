@@ -14,13 +14,29 @@ Aplicaciones Multiplataforma (DAM) en el IES Hermenegildo Lanz (Granada).
 
 - **Notas cayendo** — barras de color que bajan y llegan a su tecla justo cuando
   esa nota empieza a sonar. La altura de cada barra es su duración.
+- **Batería** — los golpes del canal 10 como pads con el nombre de cada pieza.
+  Se montan solo los que la canción usa. Antes ese canal se descartaba entero:
+  eran el **35 % de todas las notas**.
+- **Modo aprendizaje** — la canción se para y espera a que toques la nota que
+  viene, estilo Synthesia.
 - **Un teclado por canal** — modo alternativo con un teclado para cada canal
   MIDI de la canción, cada uno con su color.
-- **Se puede tocar** — con el teclado del ordenador o con el ratón, encima de la
-  canción o a solas.
-- **Mezcla** — silenciar o aislar cualquier canal, con el nombre del instrumento
-  leído del propio fichero.
+- **Se puede tocar** — con el teclado del ordenador o con el ratón, eligiendo
+  entre los 128 instrumentos de General MIDI.
+- **Mezcla** — silenciar o aislar cualquier canal, y cambiar el instrumento de
+  cualquier pista sin tocar el fichero.
 - **Transporte** — pausa, salto a cualquier punto y tempo de x0,25 a x3.
+
+### Modo aprendizaje
+
+Señala la tecla que toca con contorno, flecha y un cartel, y no sigue hasta que
+la pulses. Vigila un solo canal —en estas canciones hay hasta trece sonando a la
+vez y no habría manera de tocarlos todos— y elige el que más se parece a la
+melodía. Al activarlo adelanta hasta la primera nota que hay que tocar.
+
+![Modo aprendizaje esperando una nota](docs/aprendizaje.png)
+
+### Un teclado por canal
 
 ![Un teclado por canal](docs/multi-piano.png)
 
@@ -64,7 +80,9 @@ java -cp "out;lib/*" jd.piano.programa.ProgramaSwing
 | Clic y arrastre en las teclas | Toca con el ratón |
 
 Lo que tocas suena por el canal 16, que es el que menos usan los ficheros MIDI,
-así que no le cambia el instrumento a ninguna pista de la canción.
+así que no le cambia el instrumento a ninguna pista de la canción. Con el
+desplegable **Tocas con** eliges cualquiera de los 128 instrumentos de General
+MIDI: el banco que trae Java los tiene cargados desde el arranque.
 
 ## 🎵 Canciones
 
@@ -83,8 +101,10 @@ src/jd/piano/teclas/     el instrumento: teclas, medidas y estilo
 src/jd/piano/programa/   la aplicación
   PianoSencillo, MultiPiano               los dos modos
   Escena, Lienzo, VentanaPrincipal        dibujado y ventana
-  Cascada, Particulas                     capas animadas
+  Cascada, Particulas, Bateria            capas animadas
+  ModoAprendizaje                         esperar la nota correcta
   Partitura, AnalisisMidi, Reproductor    el MIDI
+  InstrumentosGM, PiezasPercusion         nombres de General MIDI
   SintetizadorTeclado                     tocar
 ```
 
@@ -106,7 +126,7 @@ se llegaría a 60 fps.
 .\probar.ps1
 ```
 
-57 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+76 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -122,6 +142,11 @@ puede romper sin darse cuenta:
 - El transporte entero: pausa, saltos con sus límites, tempo acotado.
 - Que no queden notas encendidas para siempre, por ninguna de las tres vías por
   las que pasaba.
+- Que buscar funcione **mientras suena**, no solo en pausa. El secuenciador de
+  Java ignora el cambio de posición si está en marcha, así que pinchar en la
+  barra de progreso no hacía nada, y ninguna comprobación lo cubría.
+- El mapa completo de percusión y el montaje de los pads.
+- Que el modo aprendizaje pare al llegar a un acorde y siga al tocarlo.
 
 Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
 suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.

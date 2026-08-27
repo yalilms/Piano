@@ -61,6 +61,48 @@ public final class Estilo {
                 % COLORES_CANAL.length];
     }
 
+    /** Nota MIDI del Do central. */
+    public static final int DO_CENTRAL = 60;
+
+    private static final String[] NOMBRES_NOTA =
+            {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+
+    /** Se pueden apagar desde la ventana; a escalas pequenas no caben. */
+    private static boolean mostrarNombres = true;
+
+    public static void setMostrarNombres(boolean mostrar) {
+        mostrarNombres = mostrar;
+    }
+
+    public static boolean isMostrarNombres() {
+        return mostrarNombres;
+    }
+
+    /** Nombre de la nota sin la octava: C, C#, D... */
+    public static String nombreDeNota(int nota) {
+        return NOMBRES_NOTA[((nota % 12) + 12) % 12];
+    }
+
+    /** Octava en la convencion cientifica, donde el Do central es C4. */
+    public static int octavaDe(int nota) {
+        return nota / 12 - 1;
+    }
+
+    /**
+     * En los Do se pone tambien el numero de octava: son la referencia con la
+     * que uno se orienta en un teclado largo.
+     */
+    public static String etiquetaDe(int nota) {
+        String nombre = nombreDeNota(nota);
+        if (nombre.equals("C")) {
+            nombre = nombre + octavaDe(nota);
+        }
+        return nombre;
+    }
+
+    public static final Color TEXTO_TECLA = new Color(120, 108, 92);
+    public static final Color MARCA_DO_CENTRAL = new Color(196, 84, 52);
+
     private Estilo() {
     }
 

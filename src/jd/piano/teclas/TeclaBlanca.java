@@ -2,6 +2,8 @@ package jd.piano.teclas;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.LinearGradientPaint;
 import java.awt.Shape;
@@ -13,6 +15,9 @@ public abstract class TeclaBlanca extends Tecla {
 
     /** Proporcion del alto que ocupa el canto frontal iluminado. */
     private static final double CANTO = 0.09;
+
+    /** Por debajo de este ancho de tecla la etiqueta no cabe. */
+    private static final int ANCHURA_MINIMA_ETIQUETA = 14;
 
     TeclaBlanca(int n, MedidasTeclado medidas) {
         super(n, medidas);
@@ -61,6 +66,32 @@ public abstract class TeclaBlanca extends Tecla {
         g.setStroke(new BasicStroke(1f));
         g.setColor(Estilo.SEPARADOR);
         g.draw(forma);
+
+        dibujarEtiqueta(g, caja);
+    }
+
+    /**
+     * El nombre de la nota abajo, y el numero de octava en los Do, que son la
+     * referencia con la que uno se orienta. Por debajo de cierto ancho de tecla
+     * no cabe y se omite en vez de salir apelotonado.
+     */
+    private void dibujarEtiqueta(Graphics2D g, Rectangle2D caja) {
+        int ancho = this.medidas.getAnchuraBlanca();
+        if (!Estilo.isMostrarNombres() || ancho < ANCHURA_MINIMA_ETIQUETA) {
+            return;
+        }
+        boolean esDoCentral = getNumeroNota() == Estilo.DO_CENTRAL;
+        String texto = Estilo.etiquetaDe(getNumeroNota());
+
+        g.setFont(new Font(Font.SANS_SERIF, esDoCentral ? Font.BOLD : Font.PLAIN,
+                Math.max(8, (int) Math.round(ancho * 0.40))));
+        FontMetrics metricas = g.getFontMetrics();
+        int x = (int) Math.round(caja.getCenterX() - metricas.stringWidth(texto) / 2.0);
+        int y = (int) Math.round(caja.getMaxY() - metricas.getDescent()
+                - this.medidas.getAlturaBlanca() * 0.10);
+
+        g.setColor(esDoCentral ? Estilo.MARCA_DO_CENTRAL : Estilo.TEXTO_TECLA);
+        g.drawString(texto, x, y);
     }
 
     /**

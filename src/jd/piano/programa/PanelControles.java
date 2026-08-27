@@ -26,6 +26,12 @@ public class PanelControles extends JPanel {
     private final JSlider tempo;
     private final JLabel tiempo;
     private final JLabel etiquetaTempo;
+    private final JLabel contador;
+
+    /** Muestra anterior, para calcular las notas por segundo. */
+    private int notasAntes;
+    private long instanteAntes;
+    private double notasPorSegundo;
 
     /**
      * Distingue mover la barra por codigo de moverla el usuario. Sin esto, el
@@ -34,9 +40,12 @@ public class PanelControles extends JPanel {
      */
     private boolean moviendoPorCodigo;
 
-    public PanelControles(Reproductor reproductor) {
+    public PanelControles(Reproductor reproductor, Runnable alCapturar) {
         this.reproductor = reproductor;
         this.moviendoPorCodigo = false;
+        this.notasAntes = 0;
+        this.instanteAntes = System.currentTimeMillis();
+        this.notasPorSegundo = 0;
 
         this.botonPausa = new JButton("Pausa");
         this.botonPausa.addActionListener(e -> {
@@ -61,6 +70,9 @@ public class PanelControles extends JPanel {
         this.tiempo = new JLabel("0:00 / 0:00");
         this.tiempo.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
 
+        this.contador = new JLabel("0 notas");
+        this.contador.setToolTipText("Notas que han sonado y notas por segundo");
+
         // 25 a 300 en centesimas: de un cuarto de velocidad al triple
         this.tempo = new JSlider(25, 300, 100);
         this.tempo.setPreferredSize(new Dimension(140, this.tempo.getPreferredSize().height));
@@ -71,11 +83,17 @@ public class PanelControles extends JPanel {
             this.etiquetaTempo.setText(String.format("x%.2f", factor));
         });
 
+        JButton botonCaptura = new JButton("Captura");
+        botonCaptura.setToolTipText("Guarda lo que se ve como PNG en capturas/");
+        botonCaptura.addActionListener(e -> alCapturar.run());
+
         JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
         izquierda.add(this.botonPausa);
         izquierda.add(botonParar);
+        izquierda.add(botonCaptura);
 
         JPanel derecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 6));
+        derecha.add(this.contador);
         derecha.add(this.tiempo);
         derecha.add(new JLabel("Tempo"));
         derecha.add(this.tempo);
@@ -102,6 +120,25 @@ public class PanelControles extends JPanel {
             this.moviendoPorCodigo = false;
         }
         this.tiempo.setText(comoReloj(posicion) + " / " + comoReloj(duracion));
+        actualizarContador();
+    }
+
+    /**
+     * Notas por segundo suavizadas. Sin suavizar, con el refresco de 100 ms el
+     * numero salta demasiado para poder leerlo.
+     */
+    private void actualizarContador() {
+        int notas = this.reproductor.getNotasTocadas();
+        long ahora = System.currentTimeMillis();
+        long transcurrido = ahora - this.instanteAntes;
+        if (transcurrido >= 250) {
+            double instantaneas = 1000.0 * (notas - this.notasAntes) / transcurrido;
+            this.notasPorSegundo = this.notasPorSegundo * 0.6 + instantaneas * 0.4;
+            this.notasAntes = notas;
+            this.instanteAntes = ahora;
+        }
+        this.contador.setText(String.format("%d notas - %.0f/s", notas,
+                Math.max(0, this.notasPorSegundo)));
     }
 
     private void actualizarBoton() {

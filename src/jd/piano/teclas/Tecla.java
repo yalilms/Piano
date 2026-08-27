@@ -32,6 +32,7 @@ public abstract class Tecla implements Pulsable {
     private int velocidad;
     private Color colorPulsada;
     private long instanteSuelte;
+    private long instantePulsacion;
 
     /**
      * Construir la forma cuesta (son operaciones de Area), y a 60 fps se pide
@@ -50,6 +51,7 @@ public abstract class Tecla implements Pulsable {
         this.velocidad = 0;
         this.colorPulsada = null;
         this.instanteSuelte = 0;
+        this.instantePulsacion = 0;
         this.formaCache = null;
         this.cajaCache = null;
     }
@@ -83,6 +85,7 @@ public abstract class Tecla implements Pulsable {
     public void pulsar(int velocidad) {
         this.pulsada = true;
         this.velocidad = velocidad;
+        this.instantePulsacion = System.currentTimeMillis();
     }
 
     @Override
@@ -99,6 +102,14 @@ public abstract class Tecla implements Pulsable {
     /** Fuerza de la ultima pulsacion, 0-127. */
     public int getVelocidad() {
         return this.velocidad;
+    }
+
+    /**
+     * Cuando se pulso por ultima vez, en milisegundos del reloj del sistema.
+     * Lo usan las particulas para saber que golpes son nuevos.
+     */
+    public long getInstantePulsacion() {
+        return this.instantePulsacion;
     }
 
     /**

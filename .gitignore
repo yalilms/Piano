@@ -33,3 +33,6 @@ lib/*.jar
 
 ### Capturas de las pruebas de render (solo en la raiz) ###
 /*.png
+
+### Capturas que exporta el programa ###
+capturas/

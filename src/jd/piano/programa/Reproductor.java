@@ -37,6 +37,9 @@ public class Reproductor implements Receiver {
     private Piano piano;
     private long duracionUs;
 
+    /** Notas que han sonado, para el contador de la barra. */
+    private int notasTocadas;
+
     /** Canales silenciados: no suenan ni encienden teclas. */
     private final boolean[] silenciado = new boolean[16];
 
@@ -52,6 +55,7 @@ public class Reproductor implements Receiver {
         this.piano = null;
         this.duracionUs = 0;
         this.sintetizador = null;
+        this.notasTocadas = 0;
     }
 
     public void setSintetizador(Synthesizer sintetizador) {
@@ -101,6 +105,12 @@ public class Reproductor implements Receiver {
         this.transmisor = this.secuenciador.getTransmitter();
         this.transmisor.setReceiver(this);
         this.duracionUs = secuencia.getMicrosecondLength();
+        this.notasTocadas = 0;
+    }
+
+    /** Cuantas notas han sonado desde que se cargo la cancion. */
+    public int getNotasTocadas() {
+        return this.notasTocadas;
     }
 
     public boolean hayCancion() {
@@ -220,6 +230,7 @@ public class Reproductor implements Receiver {
         if (comando == ShortMessage.NOTE_ON) {
             int velocidad = sm.getData2();
             if (velocidad > 0) {
+                this.notasTocadas++;
                 tecla.setColorPulsado(Estilo.colorDeCanal(canal));
                 tecla.pulsar(velocidad);
             } else {

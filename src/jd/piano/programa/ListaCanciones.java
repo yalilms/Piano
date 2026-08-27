@@ -17,8 +17,8 @@ public class ListaCanciones {
     }
 
     private void cargarCanciones() {
-        File directorio = new File(directorioCanciones);
-        if (directorio.exists() && directorio.isDirectory()) {
+        File directorio = Recursos.buscar(directorioCanciones);
+        if (directorio != null && directorio.isDirectory()) {
             File[] archivos = directorio.listFiles();
             if (archivos != null) {
                 Arrays.sort(archivos, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));

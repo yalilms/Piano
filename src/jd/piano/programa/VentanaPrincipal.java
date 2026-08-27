@@ -1,11 +1,13 @@
 package jd.piano.programa;
 
+import jd.piano.teclas.Estilo;
 import jd.piano.teclas.LayoutTeclados;
 import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
 
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
+import javax.swing.JCheckBox;
 import javax.swing.DefaultListModel;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
@@ -23,6 +25,9 @@ import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.io.File;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
@@ -95,10 +100,23 @@ public class VentanaPrincipal extends JFrame {
         this.etiquetaInfo = new JLabel("Elige una cancion");
         this.etiquetaInfo.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
+        JCheckBox verNombres = new JCheckBox("Nombres de nota", true);
+        verNombres.setToolTipText("Ensena la nota en cada tecla blanca");
+        verNombres.addActionListener(e -> {
+            Estilo.setMostrarNombres(verNombres.isSelected());
+            // Las teclas en reposo estan horneadas en la imagen cacheada
+            this.escena.invalidarCaches();
+            this.escena.prepararCaches();
+        });
+
+        JPanel arriba = new JPanel(new BorderLayout(0, 4));
+        arriba.add(this.selectorModo, BorderLayout.NORTH);
+        arriba.add(verNombres, BorderLayout.SOUTH);
+
         JPanel lateral = new JPanel(new BorderLayout(0, 6));
         lateral.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 4));
         lateral.setPreferredSize(new Dimension(270, 100));
-        lateral.add(this.selectorModo, BorderLayout.NORTH);
+        lateral.add(arriba, BorderLayout.NORTH);
         lateral.add(new JScrollPane(this.listaCanciones), BorderLayout.CENTER);
 
         JPanel abajo = new JPanel(new BorderLayout(0, 4));
@@ -110,10 +128,12 @@ public class VentanaPrincipal extends JFrame {
         setLayout(new BorderLayout());
         add(lateral, BorderLayout.WEST);
         add(this.lienzo, BorderLayout.CENTER);
-        add(new PanelControles(this.reproductor), BorderLayout.SOUTH);
+        add(new PanelControles(this.reproductor, this::guardarCaptura),
+                BorderLayout.SOUTH);
 
         habilitarArrastrarYSoltar();
 
+        setIconImages(Iconos.deLaAplicacion());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(ancho, alto);
         setLocationRelativeTo(null);
@@ -206,12 +226,14 @@ public class VentanaPrincipal extends JFrame {
 
             // Las notas cayendo solo tienen sentido en el modo sencillo: en el
             // multi los teclados van pegados y no hay franja por la que caer.
+            this.escena.quitarSuperpuestas();
             if (multi) {
                 this.cascada = null;
             } else {
                 this.cascada = new Cascada(Partitura.de(ruta), this.reproductor);
+                this.escena.anadirSuperpuesta(this.cascada);
             }
-            this.escena.setSuperposicion(this.cascada);
+            this.escena.anadirSuperpuesta(new Particulas());
 
             recolocar();
 
@@ -270,9 +292,9 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private static Image cargarFondo() {
-        File file = new File("madera.jpg");
+        File file = Recursos.buscar("madera.jpg");
         Image imagen = null;
-        if (file.exists()) {
+        if (file != null) {
             try {
                 imagen = ImageIO.read(file);
             } catch (Exception error) {
@@ -280,6 +302,25 @@ public class VentanaPrincipal extends JFrame {
             }
         }
         return imagen;
+    }
+
+    /** Guarda lo que se ve ahora mismo como PNG. */
+    private void guardarCaptura() {
+        try {
+            File carpeta = new File("capturas");
+            if (!carpeta.exists() && !carpeta.mkdirs()) {
+                throw new IOException("no puedo crear la carpeta capturas");
+            }
+            String sello = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
+                    .format(LocalDateTime.now());
+            File destino = new File(carpeta, "piano-" + sello + ".png");
+            ImageIO.write(this.escena.aImagen(), "png", destino);
+            this.etiquetaInfo.setText("Guardado en " + destino.getPath());
+        } catch (IOException error) {
+            JOptionPane.showMessageDialog(this,
+                    "No se ha podido guardar la captura:\n" + error.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     /** Deja seleccionada la primera cancion, si hay alguna. */

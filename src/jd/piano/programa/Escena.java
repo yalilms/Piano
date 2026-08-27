@@ -48,7 +48,7 @@ public class Escena {
     private BufferedImage fondo;
     private Image fondoOriginal;
     private Piano piano;
-    private CapaSuperpuesta superposicion;
+    private final List<CapaSuperpuesta> superpuestas = new ArrayList<>();
 
     /** Fondo, tapa y reflejo, sin teclas. Sirve para borrar la region sucia. */
     private BufferedImage escenarioSinTeclas;
@@ -65,7 +65,6 @@ public class Escena {
         this.fondo = null;
         this.fondoOriginal = null;
         this.piano = null;
-        this.superposicion = null;
         this.escenarioSinTeclas = null;
         this.escenarioCompleto = null;
         this.vineta = null;
@@ -94,11 +93,18 @@ public class Escena {
     }
 
     /**
-     * Capa que se pinta encima del piano en cada frame, como las notas
-     * cayendo. No entra en las imagenes cacheadas porque cambia siempre.
+     * Capas que se pintan encima del piano en cada frame, como las notas
+     * cayendo o las chispas. No entran en las imagenes cacheadas porque
+     * cambian siempre.
      */
-    public void setSuperposicion(CapaSuperpuesta superposicion) {
-        this.superposicion = superposicion;
+    public void anadirSuperpuesta(CapaSuperpuesta capa) {
+        if (capa != null) {
+            this.superpuestas.add(capa);
+        }
+    }
+
+    public void quitarSuperpuestas() {
+        this.superpuestas.clear();
     }
 
     /**
@@ -193,8 +199,8 @@ public class Escena {
             // Los brillos van sin recortar: la luz se derrama lejos de la tecla
             this.piano.dibujarBrillos(g);
 
-            if (this.superposicion != null) {
-                this.superposicion.dibujar(g, this.piano);
+            for (CapaSuperpuesta capa : this.superpuestas) {
+                capa.dibujar(g, this.piano);
             }
         }
     }

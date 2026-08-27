@@ -1,13 +1,13 @@
 package jd.piano.programa;
 
-import jd.piano.teclas.Piano;
+import jd.piano.instrumentos.InstrumentoVisual;
 
 import java.awt.Graphics2D;
 
 /**
- * Algo que se pinta encima del piano en cada frame, como las notas cayendo.
- * La Escena no necesita saber que es.
+ * Algo que se pinta encima del instrumento en cada frame, como las notas
+ * cayendo o las chispas. La Escena no necesita saber que es.
  */
 public interface CapaSuperpuesta {
-    void dibujar(Graphics2D g, Piano piano);
+    void dibujar(Graphics2D g, InstrumentoVisual instrumento);
 }

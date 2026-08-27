@@ -133,7 +133,7 @@ public final class PruebaModos {
         s.conectar(piano);
 
         Escena escena = new Escena(600, 500);
-        escena.setPiano(piano);
+        escena.setInstrumento(piano);
         RastroLibre rastro = new RastroLibre();
         rastro.setYTope(20);
         escena.anadirSuperpuesta(rastro);

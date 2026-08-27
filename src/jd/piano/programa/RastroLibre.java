@@ -1,8 +1,8 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
 
 import java.awt.Color;
 import java.awt.Font;
@@ -52,36 +52,34 @@ public class RastroLibre implements CapaSuperpuesta {
     }
 
     @Override
-    public void dibujar(Graphics2D g, Piano piano) {
-        if (piano == null) {
+    public void dibujar(Graphics2D g, InstrumentoVisual instrumento) {
+        if (instrumento == null) {
             return;
         }
         long ahora = System.currentTimeMillis();
-        actualizar(piano, ahora);
+        actualizar(instrumento, ahora);
         pintar(g, ahora);
-        dibujarUltima(g, piano);
+        dibujarUltima(g, instrumento);
     }
 
-    private void actualizar(Piano piano, long ahora) {
-        int fieltro = piano.getMedidas().getAlturaFieltro();
-
+    private void actualizar(InstrumentoVisual instrumento, long ahora) {
         // Nuevas pulsaciones y barras que siguen creciendo
         for (int nota = 0; nota <= 127; nota++) {
-            Tecla tecla = piano.getTecla(SintetizadorTeclado.CANAL, nota);
-            if (tecla == null) {
-                tecla = piano.getTecla(0, nota);
+            PiezaPulsable pieza = instrumento.piezaDe(SintetizadorTeclado.CANAL, nota);
+            if (pieza == null) {
+                pieza = instrumento.piezaDe(0, nota);
             }
-            if (tecla == null || tecla.getInstantePulsacion() == 0) {
+            if (pieza == null || pieza.getInstantePulsacion() == 0) {
                 continue;
             }
             Barra barra = this.creciendo.get(nota);
-            if (tecla.estaPulsado()) {
-                if (barra == null || barra.nacimiento != tecla.getInstantePulsacion()) {
-                    Rectangle caja = tecla.getForma().getBounds();
+            if (pieza.estaPulsado()) {
+                if (barra == null || barra.nacimiento != pieza.getInstantePulsacion()) {
+                    Rectangle caja = pieza.getForma().getBounds();
                     this.creciendo.put(nota, new Barra(nota,
                             caja.x + INSET, Math.max(2, caja.width - 2 * INSET),
-                            caja.y - fieltro, tecla.getInstantePulsacion(),
-                            tecla.getVelocidad(), tecla.getColorPulsado()));
+                            caja.y - 2, pieza.getInstantePulsacion(),
+                            pieza.getVelocidad(), pieza.getColorPulsado()));
                 }
             } else if (barra != null) {
                 // Se ha soltado: la barra se suelta y empieza a subir
@@ -131,7 +129,7 @@ public class RastroLibre implements CapaSuperpuesta {
     }
 
     /** El nombre de la ultima nota que se ha tocado, grande y centrado. */
-    private void dibujarUltima(Graphics2D g, Piano piano) {
+    private void dibujarUltima(Graphics2D g, InstrumentoVisual instrumento) {
         Barra ultima = null;
         for (Barra barra : this.creciendo.values()) {
             if (ultima == null || barra.nacimiento > ultima.nacimiento) {
@@ -141,7 +139,7 @@ public class RastroLibre implements CapaSuperpuesta {
         if (ultima == null) {
             return;
         }
-        Rectangle limites = piano.getLimites();
+        Rectangle limites = instrumento.getLimites();
         if (limites == null) {
             return;
         }

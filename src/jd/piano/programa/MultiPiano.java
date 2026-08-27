@@ -78,6 +78,13 @@ public class MultiPiano extends Piano {
         }
     }
 
+    /** Recalcula la rejilla y la escala para que quepan en ese hueco. */
+    @Override
+    public void ajustarA(int ancho, int alto) {
+        setLayout(LayoutTeclados.calcular(this.pianos.size(),
+                contarBlancas(getTeclaInicial(), getTeclaFinal()), ancho, alto));
+    }
+
     /** Cambia la rejilla y la escala de golpe, por ejemplo al redimensionar. */
     public void setLayout(LayoutTeclados layout) {
         this.layout = layout;

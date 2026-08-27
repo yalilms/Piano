@@ -1,8 +1,7 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
 
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiMessage;
@@ -34,7 +33,7 @@ public class Reproductor implements Receiver {
 
     private Sequencer secuenciador;
     private Transmitter transmisor;
-    private Piano piano;
+    private InstrumentoVisual instrumento;
     private long duracionUs;
 
     /** Notas que han sonado, para el contador de la barra. */
@@ -65,7 +64,7 @@ public class Reproductor implements Receiver {
     public Reproductor() {
         this.secuenciador = null;
         this.transmisor = null;
-        this.piano = null;
+        this.instrumento = null;
         this.duracionUs = 0;
         this.sintetizador = null;
         this.notasTocadas = 0;
@@ -130,9 +129,9 @@ public class Reproductor implements Receiver {
         }
         this.silenciado[canal] = silencio;
         aplicarSilencio(canal);
-        if (silencio && this.piano != null) {
+        if (silencio && this.instrumento != null) {
             // Solo las de ese canal: soltarTodas apagaba tambien las de los demas
-            this.piano.soltarCanal(canal);
+            this.instrumento.soltarCanal(canal);
         }
     }
 
@@ -149,8 +148,8 @@ public class Reproductor implements Receiver {
         }
     }
 
-    public void conectar(Piano piano) {
-        this.piano = piano;
+    public void conectar(InstrumentoVisual instrumento) {
+        this.instrumento = instrumento;
     }
 
     /** Deja una cancion lista para sonar, sin arrancarla. */
@@ -279,8 +278,8 @@ public class Reproductor implements Receiver {
     }
 
     private void apagarTeclado() {
-        if (this.piano != null) {
-            this.piano.soltarTodas();
+        if (this.instrumento != null) {
+            this.instrumento.soltarTodas();
         }
         if (this.bateria != null) {
             this.bateria.apagarTodo();
@@ -340,7 +339,7 @@ public class Reproductor implements Receiver {
     }
 
     private void actualizarTeclado(ShortMessage sm, int canal, int comando) {
-        if (this.piano == null) {
+        if (this.instrumento == null) {
             return;
         }
         // Muchos MIDI apagan las notas con este controlador en vez de con
@@ -353,21 +352,19 @@ public class Reproductor implements Receiver {
             return;
         }
 
-        Tecla tecla = this.piano.getTecla(canal, sm.getData1());
-        if (tecla == null) {
-            return;
-        }
+        // El instrumento decide donde cae la nota y con que color: en un piano
+        // es una tecla, en el mastil un traste. Si no la representa, se pierde.
         if (comando == ShortMessage.NOTE_ON) {
             int velocidad = sm.getData2();
             if (velocidad > 0) {
-                this.notasTocadas++;
-                tecla.setColorPulsado(Estilo.colorDeCanal(canal));
-                tecla.pulsar(velocidad);
+                if (this.instrumento.pulsar(canal, sm.getData1(), velocidad)) {
+                    this.notasTocadas++;
+                }
             } else {
-                tecla.soltar();
+                this.instrumento.soltar(canal, sm.getData1());
             }
         } else if (comando == ShortMessage.NOTE_OFF) {
-            tecla.soltar();
+            this.instrumento.soltar(canal, sm.getData1());
         }
     }
 

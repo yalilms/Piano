@@ -1,11 +1,14 @@
 package jd.piano.teclas;
 
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
+
 import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.List;
 
-public abstract class Piano implements ElementoVisual {
+public abstract class Piano implements InstrumentoVisual {
     private int teclaInicial;
     private int teclaFinal;
     private Point posicion;
@@ -22,6 +25,22 @@ public abstract class Piano implements ElementoVisual {
     }
 
     public abstract Tecla getTecla(int canal, int nota);
+
+    @Override
+    public String getNombre() {
+        return "Piano";
+    }
+
+    /** Para el contrato de instrumento: en un piano la pieza es la tecla. */
+    @Override
+    public PiezaPulsable piezaDe(int canal, int nota) {
+        return getTecla(canal, nota);
+    }
+
+    @Override
+    public PiezaPulsable piezaEn(int x, int y) {
+        return teclaEn(x, y);
+    }
 
     /**
      * Cambia el tamano de las teclas conservando su estado y su identidad.

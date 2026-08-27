@@ -1,5 +1,6 @@
 package jd.piano.programa;
 
+import jd.piano.instrumentos.InstrumentoVisual;
 import jd.piano.teclas.Estilo;
 import jd.piano.teclas.LayoutTeclados;
 import jd.piano.teclas.MedidasTeclado;
@@ -61,6 +62,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     private final DefaultListModel<File> modeloCanciones;
     private final JList<File> listaCanciones;
     private final JComboBox<String> selectorInstrumento;
+    private final JComboBox<TipoInstrumento> selectorVerComo;
     private final JLabel etiquetaInfo;
     private final PantallaInicio pantallaInicio;
     private final JPanel tarjetas;
@@ -113,6 +115,16 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             this.lienzo.requestFocusInWindow();
         });
 
+        // Con que instrumento se ve la cancion. Cambiarlo recarga la actual.
+        this.selectorVerComo = new JComboBox<>(TipoInstrumento.values());
+        this.selectorVerComo.setToolTipText("Con que instrumento se ve la cancion");
+        this.selectorVerComo.addActionListener(e -> {
+            if (this.rutaActual != null && this.modo.necesitaCancion()) {
+                cargar(this.rutaActual);
+            }
+            this.lienzo.requestFocusInWindow();
+        });
+
         this.modeloCanciones = new DefaultListModel<>();
         for (String ruta : canciones) {
             this.modeloCanciones.addElement(new File(ruta));
@@ -157,9 +169,17 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     }
 
     private JPanel crearLateral() {
+        JPanel verComo = new JPanel(new BorderLayout(4, 0));
+        verComo.add(new JLabel(" Ver como "), BorderLayout.WEST);
+        verComo.add(this.selectorVerComo, BorderLayout.CENTER);
+
         JPanel tocasCon = new JPanel(new BorderLayout(4, 0));
         tocasCon.add(new JLabel(" Tocas con "), BorderLayout.WEST);
         tocasCon.add(this.selectorInstrumento, BorderLayout.CENTER);
+
+        JPanel arriba = new JPanel(new BorderLayout(0, 4));
+        arriba.add(verComo, BorderLayout.NORTH);
+        arriba.add(tocasCon, BorderLayout.SOUTH);
 
         JPanel abajo = new JPanel(new BorderLayout(0, 4));
         abajo.add(this.etiquetaInfo, BorderLayout.NORTH);
@@ -169,7 +189,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         JPanel lateral = new JPanel(new BorderLayout(0, 6));
         lateral.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 4));
         lateral.setPreferredSize(new Dimension(270, 100));
-        lateral.add(tocasCon, BorderLayout.NORTH);
+        lateral.add(arriba, BorderLayout.NORTH);
         lateral.add(new JScrollPane(this.listaCanciones), BorderLayout.CENTER);
         lateral.add(abajo, BorderLayout.SOUTH);
         return lateral;
@@ -197,7 +217,6 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                         this.modo = ModoDeUso.VER_CANCION;
                         this.menu.marcarModo(this.modo);
                     }
-                    this.cambiador.show(this.tarjetas, "piano");
                     cargar(elegida.getPath());
                 }
             }
@@ -224,8 +243,6 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     private void elegirDesdeElInicio(ModoDeUso elegido) {
         this.modo = elegido;
         this.menu.marcarModo(elegido);
-        this.cambiador.show(this.tarjetas, "piano");
-
         if (!elegido.necesitaCancion()) {
             prepararLibre();
             this.lienzo.requestFocusInWindow();
@@ -238,7 +255,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     /** Piano vacio y la lista esperando: nada suena hasta que se elige. */
     private void esperarQueElijanCancion() {
-        this.escena.setPiano(null);
+        this.escena.setInstrumento(null);
         this.escena.quitarSuperpuestas();
         this.escena.setMensaje("Elige una cancion de la lista");
         this.cascada = null;
@@ -248,6 +265,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.panelCanales.mostrarAviso("Aqui saldran los canales de la cancion.");
         this.etiquetaInfo.setText("<html><b>" + this.modo.getNombre() + "</b><br>"
                 + "<i>" + this.modo.getExplicacion() + "</i></html>");
+        mostrarElPiano();
         setTitle("Piano MIDI - " + this.modo.getNombre());
         this.listaCanciones.requestFocusInWindow();
     }
@@ -256,20 +274,29 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     /** Cambia de modo de uso y rehace lo que haga falta. */
     public void setModo(ModoDeUso nuevo) {
-        if (nuevo == null || nuevo == this.modo) {
+        if (nuevo == null) {
             return;
         }
+        // Pedir el modo en el que ya se esta tambien tiene que llevar al piano:
+        // si no, desde la pantalla de inicio Ctrl+1 no hacia nada.
+        boolean cambia = nuevo != this.modo;
         this.modo = nuevo;
         this.menu.marcarModo(nuevo);
-        if (!nuevo.necesitaCancion()) {
+
+        if (!cambia && this.escena.getInstrumento() != null) {
+            mostrarElPiano();
+        } else if (!nuevo.necesitaCancion()) {
             prepararLibre();
         } else if (this.rutaActual != null) {
             cargar(this.rutaActual);
         } else {
             esperarQueElijanCancion();
         }
-        this.cambiador.show(this.tarjetas, "piano");
         this.lienzo.requestFocusInWindow();
+    }
+
+    private void mostrarElPiano() {
+        this.cambiador.show(this.tarjetas, "piano");
     }
 
     public ModoDeUso getModo() {
@@ -283,19 +310,20 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         this.cascada = null;
         this.aprendizaje = null;
 
-        Piano piano = new PianoSencillo(NOTA_INICIAL, NOTA_FINAL, MedidasTeclado.NORMAL);
-        this.escena.setPiano(piano);
+        InstrumentoVisual instrumento = getTipoElegido().crear();
+        this.escena.setInstrumento(instrumento);
         this.escena.quitarSuperpuestas();
         this.rastro = new RastroLibre();
         this.escena.anadirSuperpuesta(this.rastro);
         this.escena.anadirSuperpuesta(new Particulas());
-        this.sintetizador.conectar(piano);
-        this.reproductor.conectar(piano);
+        this.sintetizador.conectar(instrumento);
+        this.reproductor.conectar(instrumento);
 
         this.bateria.construir(List.of());
         this.panelCanales.mostrarLibre();
         this.panelControles.setVisible(false);
         this.listaCanciones.clearSelection();
+        mostrarElPiano();
         setTitle("Piano MIDI - tocar libre");
         this.etiquetaInfo.setText("<html><b>Tocar libre</b><br>"
                 + "<i>Clic en el piano y toca con Z-M y Q-U.<br>"
@@ -312,14 +340,14 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             this.panelControles.setVisible(true);
 
             AnalisisMidi analisis = AnalisisMidi.de(ruta);
-            Piano piano = crearPiano(analisis);
-            this.escena.setPiano(piano);
+            InstrumentoVisual instrumento = crearInstrumento(analisis);
+            this.escena.setInstrumento(instrumento);
             this.escena.quitarSuperpuestas();
             montarCapas(ruta, analisis);
 
             recolocar();
-            this.sintetizador.conectar(piano);
-            this.reproductor.conectar(piano);
+            this.sintetizador.conectar(instrumento);
+            this.reproductor.conectar(instrumento);
             this.reproductor.cargar(ruta);
             this.panelCanales.mostrar(analisis);
             this.reproductor.reproducir();
@@ -330,11 +358,9 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                 this.aprendizaje.setActivo(true);
             }
 
+            mostrarElPiano();
             setTitle("Piano MIDI - " + new File(ruta).getName());
-            this.etiquetaInfo.setText("<html><b>" + this.modo.getNombre() + "</b><br>"
-                    + analisis.getTotalNotas() + " notas, "
-                    + analisis.getCanalesUsados().size() + " canales<br>"
-                    + "<i>" + this.modo.getExplicacion() + "</i></html>");
+            this.etiquetaInfo.setText(informe(analisis, instrumento, ruta));
         } catch (Exception error) {
             JOptionPane.showMessageDialog(this,
                     "No se ha podido abrir la cancion:\n" + error.getMessage(),
@@ -342,16 +368,25 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         }
     }
 
-    private Piano crearPiano(AnalisisMidi analisis) {
-        Piano piano;
+    /**
+     * El modo por canales siempre es una rejilla de teclados; en los demas
+     * manda el instrumento elegido en "Ver como".
+     */
+    private InstrumentoVisual crearInstrumento(AnalisisMidi analisis) {
+        InstrumentoVisual instrumento;
         if (this.modo.esPorCanales()) {
             List<Integer> canales = analisis.getCanalesUsados();
-            piano = new MultiPiano(canales, NOTA_INICIAL, NOTA_FINAL,
+            instrumento = new MultiPiano(canales, NOTA_INICIAL, NOTA_FINAL,
                     layoutPara(canales.size()));
         } else {
-            piano = new PianoSencillo(NOTA_INICIAL, NOTA_FINAL, MedidasTeclado.NORMAL);
+            instrumento = getTipoElegido().crear();
         }
-        return piano;
+        return instrumento;
+    }
+
+    private TipoInstrumento getTipoElegido() {
+        Object elegido = this.selectorVerComo.getSelectedItem();
+        return elegido instanceof TipoInstrumento tipo ? tipo : TipoInstrumento.TECLADO;
     }
 
     private void montarCapas(String ruta, AnalisisMidi analisis) throws Exception {
@@ -392,23 +427,22 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     /** Recalcula escala y posicion para el tamano y el modo actuales. */
     private void recolocar() {
-        Piano piano = this.escena.getPiano();
-        if (piano == null) {
+        InstrumentoVisual instrumento = this.escena.getInstrumento();
+        if (instrumento == null) {
             return;
         }
-        if (piano instanceof MultiPiano mp) {
-            mp.setLayout(layoutPara(mp.getCanales().size()));
-        } else {
-            // El teclado tambien tiene que caber: a escala fija son 1250 px
-            piano.setMedidas(layoutPara(1).getMedidas());
-        }
+        // Cada instrumento sabe reescalarse: el teclado cambia el tamano de
+        // tecla, el mastil el largo de los trastes
+        instrumento.ajustarA(this.escena.getAnchura() - 2 * MARGEN,
+                this.escena.getAltura() - 2 * MARGEN);
 
-        // Con cascada o con rastro el teclado se baja, para dejar sitio arriba
+        // Con cascada o con rastro el instrumento se baja, para dejar sitio
         boolean hayFranja = this.cascada != null || this.rastro != null;
         int y = hayFranja
-                ? this.escena.getAltura() - piano.getAltura() - ALTO_TAPA_LIBRE
-                : (this.escena.getAltura() - piano.getAltura()) / 2;
-        piano.setPosicion((this.escena.getAnchura() - piano.getAnchura()) / 2, y);
+                ? this.escena.getAltura() - instrumento.getAltura() - ALTO_TAPA_LIBRE
+                : (this.escena.getAltura() - instrumento.getAltura()) / 2;
+        instrumento.setPosicion(
+                (this.escena.getAnchura() - instrumento.getAnchura()) / 2, y);
 
         int arriba = MARGEN / 2;
         if (!this.bateria.estaVacia()) {
@@ -417,8 +451,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             arriba += this.bateria.getAlturaNecesaria() + MARGEN / 3;
         }
         if (this.cascada != null) {
-            this.cascada.setZona(arriba,
-                    y - piano.getMedidas().getAlturaFieltro() - arriba);
+            this.cascada.setZona(arriba, y - 4 - arriba);
         }
         if (this.rastro != null) {
             this.rastro.setYTope(arriba);
@@ -484,6 +517,36 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     public void ayuda() {
         JOptionPane.showMessageDialog(this, BarraDeMenu.textoDeAyuda(),
                 "Controles", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Lo que se cuenta en el panel: el modo, la cancion, y cuanto de ella cabe
+     * en el instrumento elegido. Una guitarra no llega a las notas graves de un
+     * piano, y mas vale decirlo que dejar media cancion sin pintar en silencio.
+     */
+    private String informe(AnalisisMidi analisis, InstrumentoVisual instrumento,
+                           String ruta) {
+        StringBuilder texto = new StringBuilder("<html><b>");
+        texto.append(this.modo.getNombre()).append("</b><br>")
+                .append(analisis.getTotalNotas()).append(" notas, ")
+                .append(analisis.getCanalesUsados().size()).append(" canales<br>");
+
+        if (!this.modo.esPorCanales()) {
+            try {
+                double cobertura = getTipoElegido().coberturaDe(Partitura.de(ruta));
+                // Sin articulo, que "en el Guitarra" no concuerda
+                texto.append(instrumento.getNombre()).append(": se ven el ")
+                        .append(Math.round(cobertura)).append("% de las notas");
+                if (cobertura < 90) {
+                    texto.append(" <b>(el resto se sale de su rango)</b>");
+                }
+                texto.append("<br>");
+            } catch (Exception error) {
+                // sin cobertura que informar
+            }
+        }
+        texto.append("<i>").append(this.modo.getExplicacion()).append("</i></html>");
+        return texto.toString();
     }
 
     private void mostrarNombres(boolean ver) {

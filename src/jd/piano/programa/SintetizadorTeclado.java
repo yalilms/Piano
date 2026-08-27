@@ -1,8 +1,8 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
 
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiSystem;
@@ -59,7 +59,7 @@ public class SintetizadorTeclado {
 
     private Synthesizer sintetizador;
     private MidiChannel canal;
-    private Piano piano;
+    private InstrumentoVisual instrumento;
     private int octava;
     private int programa;
     private boolean sostenido;
@@ -70,14 +70,14 @@ public class SintetizadorTeclado {
     public SintetizadorTeclado() {
         this.sintetizador = null;
         this.canal = null;
-        this.piano = null;
+        this.instrumento = null;
         this.octava = 0;
         this.programa = 0;
         this.sostenido = false;
     }
 
-    public void conectar(Piano piano) {
-        this.piano = piano;
+    public void conectar(InstrumentoVisual instrumento) {
+        this.instrumento = instrumento;
     }
 
     /**
@@ -186,10 +186,10 @@ public class SintetizadorTeclado {
         if (this.canal != null) {
             this.canal.noteOn(nota, VELOCIDAD);
         }
-        Tecla tecla = teclaDe(nota);
-        if (tecla != null) {
-            tecla.setColorPulsado(Estilo.COLOR_USUARIO);
-            tecla.pulsar(VELOCIDAD);
+        PiezaPulsable pieza = piezaDe(nota);
+        if (pieza != null) {
+            pieza.setColorPulsado(Estilo.COLOR_USUARIO);
+            pieza.pulsar(VELOCIDAD);
         }
     }
 
@@ -200,9 +200,9 @@ public class SintetizadorTeclado {
         if (this.canal != null) {
             this.canal.noteOff(nota);
         }
-        Tecla tecla = teclaDe(nota);
-        if (tecla != null) {
-            tecla.soltar();
+        PiezaPulsable pieza = piezaDe(nota);
+        if (pieza != null) {
+            pieza.soltar();
         }
     }
 
@@ -217,19 +217,19 @@ public class SintetizadorTeclado {
     }
 
     /**
-     * En el multipiano puede que el canal reservado no tenga teclado; entonces
-     * se usa el primero que haya, para que lo que se toca se vea igual.
+     * En el modo por canales puede que el canal reservado no tenga teclado;
+     * entonces se usa el primero que haya, para que lo que se toca se vea.
      */
-    private Tecla teclaDe(int nota) {
-        Tecla tecla = null;
-        if (this.piano != null) {
-            tecla = this.piano.getTecla(CANAL, nota);
-            if (tecla == null && this.piano instanceof MultiPiano mp
+    private PiezaPulsable piezaDe(int nota) {
+        PiezaPulsable pieza = null;
+        if (this.instrumento != null) {
+            pieza = this.instrumento.piezaDe(CANAL, nota);
+            if (pieza == null && this.instrumento instanceof MultiPiano mp
                     && !mp.getCanales().isEmpty()) {
-                tecla = this.piano.getTecla(mp.getCanales().get(0), nota);
+                pieza = this.instrumento.piezaDe(mp.getCanales().get(0), nota);
             }
         }
-        return tecla;
+        return pieza;
     }
 
     private boolean cambiarOctava(int delta) {

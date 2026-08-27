@@ -1,8 +1,8 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
 
 import java.awt.Color;
 import java.awt.GradientPaint;
@@ -53,8 +53,8 @@ public class Cascada implements CapaSuperpuesta {
     }
 
     @Override
-    public void dibujar(Graphics2D g, Piano piano) {
-        if (piano == null || this.alturaCaida <= 0) {
+    public void dibujar(Graphics2D g, InstrumentoVisual instrumento) {
+        if (instrumento == null || this.alturaCaida <= 0) {
             return;
         }
         long posicion = this.reproductor.getPosicionUs();
@@ -70,7 +70,6 @@ public class Cascada implements CapaSuperpuesta {
             this.indiceDesde++;
         }
 
-        int fieltro = piano.getMedidas().getAlturaFieltro();
         long horizonte = posicion + ANTICIPACION_US;
 
         for (int i = this.indiceDesde; i < notas.size(); i++) {
@@ -78,19 +77,20 @@ public class Cascada implements CapaSuperpuesta {
             if (nota.inicioUs() > horizonte) {
                 break;
             }
-            dibujarNota(g, piano, nota, posicion, fieltro);
+            dibujarNota(g, instrumento, nota, posicion);
         }
     }
 
-    private void dibujarNota(Graphics2D g, Piano piano, NotaMidi nota,
-                             long posicion, int fieltro) {
-        Tecla tecla = piano.getTecla(nota.canal(), nota.nota());
-        if (tecla == null) {
+    private void dibujarNota(Graphics2D g, InstrumentoVisual instrumento,
+                             NotaMidi nota,
+                             long posicion) {
+        // El instrumento dice donde cae la nota: una tecla, un traste...
+        Rectangle caja = instrumento.donde(nota.canal(), nota.nota());
+        if (caja == null) {
             return;
         }
-        Rectangle caja = tecla.getForma().getBounds();
-        // Las barras mueren en el fieltro, no encima de las teclas
-        double yTeclado = caja.y - fieltro;
+        // Las barras mueren justo encima, no tapando la pieza
+        double yTeclado = caja.y - 2;
 
         double fraccionInicio = (nota.inicioUs() - posicion) / (double) ANTICIPACION_US;
         double fraccionFin = (nota.finUs() - posicion) / (double) ANTICIPACION_US;

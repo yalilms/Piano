@@ -1,10 +1,12 @@
 package jd.piano.pruebas;
 
+import jd.piano.instrumentos.InstrumentoVisual;
 import jd.piano.instrumentos.Mastil;
 import jd.piano.instrumentos.PiezaPulsable;
 import jd.piano.programa.AnalisisMidi;
 import jd.piano.programa.NotaMidi;
 import jd.piano.programa.Partitura;
+import jd.piano.programa.TipoInstrumento;
 
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
@@ -35,7 +37,58 @@ public final class PruebaInstrumentos {
         posiciones(c);
         dibujado(c);
         cobertura(c);
+        tipos(c);
         return c;
+    }
+
+    /**
+     * El selector de instrumento: que cada tipo cree el suyo, declare su rango
+     * de verdad y sepa decir cuanto de una cancion le cabe.
+     */
+    private static void tipos(Comprobador c) {
+        boolean todosCrean = true;
+        boolean rangosCoherentes = true;
+        for (TipoInstrumento tipo : TipoInstrumento.values()) {
+            InstrumentoVisual i = tipo.crear();
+            todosCrean = todosCrean && i != null
+                    && i.getNombre() != null && !i.getNombre().isBlank();
+            rangosCoherentes = rangosCoherentes
+                    && tipo.getNotaMinima() < tipo.getNotaMaxima();
+        }
+        c.comprobar("los tres tipos crean su instrumento", todosCrean);
+        c.comprobar("los rangos declarados son coherentes", rangosCoherentes);
+
+        c.comprobar("el teclado abarca mas que la guitarra",
+                TipoInstrumento.TECLADO.getNotaMaxima()
+                        - TipoInstrumento.TECLADO.getNotaMinima()
+                        > TipoInstrumento.GUITARRA.getNotaMaxima()
+                        - TipoInstrumento.GUITARRA.getNotaMinima());
+
+        // El rango declarado tiene que ser el que de verdad acepta el mastil
+        InstrumentoVisual guitarra = TipoInstrumento.GUITARRA.crear();
+        guitarra.setPosicion(0, 0);
+        c.comprobar("el rango declarado de la guitarra es el real",
+                guitarra.piezaDe(0, TipoInstrumento.GUITARRA.getNotaMinima()) != null
+                        && guitarra.piezaDe(0, TipoInstrumento.GUITARRA.getNotaMinima() - 1) == null
+                        && guitarra.piezaDe(0, TipoInstrumento.GUITARRA.getNotaMaxima()) != null
+                        && guitarra.piezaDe(0, TipoInstrumento.GUITARRA.getNotaMaxima() + 1) == null);
+
+        File[] canciones = PruebaMidi.canciones();
+        if (canciones.length > 0) {
+            try {
+                Partitura p = Partitura.de(canciones[0].getPath());
+                double teclado = TipoInstrumento.TECLADO.coberturaDe(p);
+                double guitarraCobertura = TipoInstrumento.GUITARRA.coberturaDe(p);
+                c.dato(String.format("%s: teclado %.0f%%, guitarra %.0f%%",
+                        canciones[0].getName(), teclado, guitarraCobertura));
+                c.comprobar("el teclado cubre mas que la guitarra en una cancion real",
+                        teclado >= guitarraCobertura);
+                c.comprobar("la cobertura esta entre 0 y 100",
+                        guitarraCobertura >= 0 && guitarraCobertura <= 100);
+            } catch (Exception error) {
+                c.comprobar("la cobertura no lanza excepciones: " + error, false);
+            }
+        }
     }
 
     private static void rango(Comprobador c) {

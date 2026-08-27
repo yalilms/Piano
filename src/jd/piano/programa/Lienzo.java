@@ -1,7 +1,7 @@
 package jd.piano.programa;
 
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
 
 import javax.swing.JPanel;
 import javax.swing.Timer;
@@ -141,12 +141,12 @@ public class Lienzo extends JPanel {
     }
 
     private void tocar(int x, int y) {
-        Piano piano = this.escena.getPiano();
-        if (piano == null || this.sintetizador == null) {
+        InstrumentoVisual instrumento = this.escena.getInstrumento();
+        if (instrumento == null || this.sintetizador == null) {
             return;
         }
-        Tecla tecla = piano.teclaEn(x, y);
-        int nota = tecla == null ? -1 : tecla.getNumeroNota();
+        PiezaPulsable pieza = instrumento.piezaEn(x, y);
+        int nota = pieza == null ? -1 : pieza.getNumeroNota();
         // Al arrastrar solo se cambia de nota cuando se entra en otra tecla
         if (nota != this.notaDelRaton) {
             soltarRaton();

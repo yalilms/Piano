@@ -1,6 +1,7 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
+import jd.piano.teclas.LayoutTeclados;
 import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
@@ -54,6 +55,17 @@ public class PianoSencillo extends Piano {
         if (getPosicion() != null) {
             setPosicion(getPosicion().x, getPosicion().y);
         }
+    }
+
+    /**
+     * Escala el teclado para que quepa en ese hueco. A escala fija son 1250 px
+     * de ancho y se salia en ventanas mas estrechas.
+     */
+    @Override
+    public void ajustarA(int ancho, int alto) {
+        setMedidas(LayoutTeclados.calcular(1,
+                contarBlancas(getTeclaInicial(), getTeclaFinal()),
+                ancho, alto).getMedidas());
     }
 
     @Override

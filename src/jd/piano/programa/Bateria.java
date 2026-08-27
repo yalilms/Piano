@@ -1,7 +1,7 @@
 package jd.piano.programa;
 
+import jd.piano.instrumentos.InstrumentoVisual;
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -118,7 +118,8 @@ public class Bateria implements CapaSuperpuesta {
     }
 
     @Override
-    public void dibujar(Graphics2D g, Piano piano) {
+    public void dibujar(Graphics2D g, InstrumentoVisual instrumento) {
+        // Los pads no dependen del instrumento melodico que haya debajo
         if (this.zona == null) {
             return;
         }

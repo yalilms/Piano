@@ -1,4 +1,4 @@
-package jd.piano.teclas;
+package jd.piano.instrumentos;
 
 import java.awt.Graphics2D;
 

@@ -1,8 +1,8 @@
 package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
-import jd.piano.teclas.Piano;
-import jd.piano.teclas.Tecla;
+import jd.piano.instrumentos.InstrumentoVisual;
+import jd.piano.instrumentos.PiezaPulsable;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -179,13 +179,13 @@ public class ModoAprendizaje implements CapaSuperpuesta {
     }
 
     @Override
-    public void dibujar(Graphics2D g, Piano piano) {
-        if (!this.activo || piano == null || this.grupos.isEmpty()) {
+    public void dibujar(Graphics2D g, InstrumentoVisual instrumento) {
+        if (!this.activo || instrumento == null || this.grupos.isEmpty()) {
             return;
         }
-        actualizar(piano);
+        actualizar(instrumento);
         if (this.esperando) {
-            pintarEsperadas(g, piano);
+            pintarEsperadas(g, instrumento);
         }
     }
 
@@ -193,7 +193,7 @@ public class ModoAprendizaje implements CapaSuperpuesta {
      * Se lleva desde el dibujado porque hay que mirarlo en cada frame: mientras
      * la cancion esta parada nadie mas avanza el estado.
      */
-    private void actualizar(Piano piano) {
+    private void actualizar(InstrumentoVisual instrumento) {
         long posicion = this.reproductor.getPosicionUs();
 
         // Si han saltado a otro punto, hay que recolocarse
@@ -219,8 +219,8 @@ public class ModoAprendizaje implements CapaSuperpuesta {
             // Con la cancion parada, cualquier tecla pulsada la ha pulsado el
             // usuario: el reproductor no manda nada
             for (int nota : grupo.notas) {
-                Tecla tecla = buscar(piano, nota);
-                if (tecla != null && tecla.estaPulsado()) {
+                PiezaPulsable pieza = buscar(instrumento, nota);
+                if (pieza != null && pieza.estaPulsado()) {
                     this.acertadas.add(nota);
                 }
             }
@@ -233,27 +233,27 @@ public class ModoAprendizaje implements CapaSuperpuesta {
         }
     }
 
-    private Tecla buscar(Piano piano, int nota) {
-        Tecla tecla = piano.getTecla(this.canal, nota);
-        if (tecla == null) {
-            tecla = piano.getTecla(SintetizadorTeclado.CANAL, nota);
+    private PiezaPulsable buscar(InstrumentoVisual instrumento, int nota) {
+        PiezaPulsable pieza = instrumento.piezaDe(this.canal, nota);
+        if (pieza == null) {
+            pieza = instrumento.piezaDe(SintetizadorTeclado.CANAL, nota);
         }
-        return tecla;
+        return pieza;
     }
 
-    private void pintarEsperadas(Graphics2D g, Piano piano) {
+    private void pintarEsperadas(Graphics2D g, InstrumentoVisual instrumento) {
         Grupo grupo = this.grupos.get(this.indice);
         List<String> nombres = new ArrayList<>();
         Rectangle primera = null;
 
         for (int nota : grupo.notas) {
-            Tecla tecla = buscar(piano, nota);
-            if (tecla == null) {
+            PiezaPulsable pieza = buscar(instrumento, nota);
+            if (pieza == null) {
                 continue;
             }
             boolean hecha = this.acertadas.contains(nota);
             Color color = hecha ? ACERTADA : ESPERADA;
-            Shape forma = tecla.getForma();
+            Shape forma = pieza.getForma();
             Rectangle caja = forma.getBounds();
             if (primera == null || caja.x < primera.x) {
                 primera = caja;
@@ -271,7 +271,7 @@ public class ModoAprendizaje implements CapaSuperpuesta {
         }
 
         if (primera != null) {
-            dibujarCartel(g, piano, nombres);
+            dibujarCartel(g, instrumento, nombres);
         }
     }
 
@@ -287,8 +287,9 @@ public class ModoAprendizaje implements CapaSuperpuesta {
         g.fillPolygon(xs, ys, 3);
     }
 
-    private void dibujarCartel(Graphics2D g, Piano piano, List<String> nombres) {
-        Rectangle limites = piano.getLimites();
+    private void dibujarCartel(Graphics2D g, InstrumentoVisual instrumento,
+                               List<String> nombres) {
+        Rectangle limites = instrumento.getLimites();
         if (limites == null) {
             return;
         }

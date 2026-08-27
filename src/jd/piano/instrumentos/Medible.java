@@ -1,4 +1,4 @@
-package jd.piano.teclas;
+package jd.piano.instrumentos;
 
 public interface Medible {
     int getAnchura();

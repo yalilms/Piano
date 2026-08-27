@@ -128,22 +128,9 @@ public class Mastil implements InstrumentoVisual {
     }
 
     @Override
-    public boolean pulsar(int canal, int nota, int velocidad) {
-        Punto punto = puntoDe(nota);
-        if (punto == null) {
-            return false;
-        }
-        punto.setColorPulsado(Estilo.colorDeCanal(canal));
-        punto.pulsar(velocidad);
-        return true;
-    }
-
-    @Override
-    public void soltar(int canal, int nota) {
-        Punto punto = puntoDe(nota);
-        if (punto != null) {
-            punto.soltar();
-        }
+    public PiezaPulsable piezaDe(int canal, int nota) {
+        // Un mastil no distingue canales: todos comparten las mismas posiciones
+        return puntoDe(nota);
     }
 
     @Override
@@ -159,15 +146,7 @@ public class Mastil implements InstrumentoVisual {
 
     @Override
     public void soltarCanal(int canal) {
-        // Un mastil no distingue canales: todos comparten las mismas posiciones
         soltarTodas();
-    }
-
-    @Override
-    public Rectangle donde(int canal, int nota) {
-        Punto punto = puntoDe(nota);
-        return punto == null || this.posicion == null
-                ? null : punto.getForma().getBounds();
     }
 
     @Override

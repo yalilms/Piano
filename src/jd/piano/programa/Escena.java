@@ -1,6 +1,6 @@
 package jd.piano.programa;
 
-import jd.piano.teclas.Piano;
+import jd.piano.instrumentos.InstrumentoVisual;
 
 import java.awt.AlphaComposite;
 import java.awt.Color;
@@ -49,7 +49,7 @@ public class Escena {
     private int alto;
     private BufferedImage fondo;
     private Image fondoOriginal;
-    private Piano piano;
+    private InstrumentoVisual instrumento;
 
     /** Aviso centrado para cuando no hay piano que dibujar. */
     private String mensaje;
@@ -69,7 +69,7 @@ public class Escena {
         this.alto = alto;
         this.fondo = null;
         this.fondoOriginal = null;
-        this.piano = null;
+        this.instrumento = null;
         this.mensaje = null;
         this.escenarioSinTeclas = null;
         this.escenarioCompleto = null;
@@ -89,9 +89,9 @@ public class Escena {
         invalidarCaches();
     }
 
-    public void setPiano(Piano piano) {
-        this.piano = piano;
-        if (piano != null) {
+    public void setInstrumento(InstrumentoVisual instrumento) {
+        this.instrumento = instrumento;
+        if (instrumento != null) {
             this.mensaje = null;
         }
         invalidarCaches();
@@ -106,8 +106,8 @@ public class Escena {
         invalidarCaches();
     }
 
-    public Piano getPiano() {
-        return this.piano;
+    public InstrumentoVisual getInstrumento() {
+        return this.instrumento;
     }
 
     /**
@@ -168,8 +168,8 @@ public class Escena {
         Graphics2D g = this.escenarioSinTeclas.createGraphics();
         aplicarCalidad(g);
         dibujarFondo(g);
-        if (this.piano != null && this.piano.getLimites() != null && capaReposo != null) {
-            dibujarTapaConReflejo(g, this.piano.getLimites(), capaReposo);
+        if (this.instrumento != null && this.instrumento.getLimites() != null && capaReposo != null) {
+            dibujarTapaConReflejo(g, this.instrumento.getLimites(), capaReposo);
         }
         g.dispose();
 
@@ -209,9 +209,9 @@ public class Escena {
         aplicarCalidad(g);
         g.drawImage(this.escenarioCompleto, 0, 0, null);
 
-        if (this.piano != null) {
+        if (this.instrumento != null) {
             this.sucias.clear();
-            this.piano.anadirRegionesActivas(this.sucias);
+            this.instrumento.anadirRegionesActivas(this.sucias);
             recortarALaEscena(this.sucias);
             fusionar(this.sucias);
             limitar(this.sucias, MAXIMO_REGIONES);
@@ -224,16 +224,16 @@ public class Escena {
                 // semitransparentes al volver a pintarlas encima. Se copia solo
                 // el trozo: volcar la imagen entera en cada region sale caro.
                 volcarTrozo(g, this.escenarioSinTeclas, sucia);
-                this.piano.dibujar(g);
+                this.instrumento.dibujar(g);
                 volcarTrozo(g, this.vineta, sucia);
             }
             g.setClip(clipAnterior);
 
             // Los brillos van sin recortar: la luz se derrama lejos de la tecla
-            this.piano.dibujarBrillos(g);
+            this.instrumento.dibujarBrillos(g);
 
             for (CapaSuperpuesta capa : this.superpuestas) {
-                capa.dibujar(g, this.piano);
+                capa.dibujar(g, this.instrumento);
             }
         }
     }
@@ -332,12 +332,12 @@ public class Escena {
 
     private BufferedImage crearCapaPiano() {
         BufferedImage capa = null;
-        if (this.piano != null && this.piano.getLimites() != null) {
+        if (this.instrumento != null && this.instrumento.getLimites() != null) {
             capa = new BufferedImage(this.ancho, this.alto,
                     BufferedImage.TYPE_INT_ARGB_PRE);
             Graphics2D g = capa.createGraphics();
             aplicarCalidad(g);
-            this.piano.dibujarEnReposo(g);
+            this.instrumento.dibujarEnReposo(g);
             g.dispose();
         }
         return capa;

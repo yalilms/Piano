@@ -176,6 +176,19 @@ puede romper sin darse cuenta:
 Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
 suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.
 
+## 🖱️ Acceso en el escritorio
+
+```powershell
+.\crear-acceso.ps1
+```
+
+Deja un **Piano MIDI** en el escritorio con su icono, que lo dibuja el propio
+programa (`Iconos`) para que sea el mismo que el de la ventana.
+
+El acceso llama a `lanzar.ps1`, que recompila **solo si has tocado el codigo** y
+abre la ventana sin consola. Si algo falla avisa con un cuadro de dialogo, que si
+no arranca sin consola y no se veria el error.
+
 ## 📷 Capturas
 
 El botón **Captura**, o `Ctrl+G`, guarda lo que se ve en `capturas/` como PNG.

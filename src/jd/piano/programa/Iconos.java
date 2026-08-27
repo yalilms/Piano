@@ -2,11 +2,18 @@ package jd.piano.programa;
 
 import jd.piano.teclas.Estilo;
 
+import javax.imageio.ImageIO;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.BufferedOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,6 +35,72 @@ public final class Iconos {
             iconos.add(crear(tamano));
         }
         return iconos;
+    }
+
+    /**
+     * Guarda el icono como .ico, que es lo que necesita un acceso directo de
+     * Windows.
+     *
+     * Un .ico no es mas que una cabecera, una entrada por imagen y los datos
+     * seguidos. Desde Windows Vista se admite PNG dentro, asi que se reutiliza
+     * el codificador que ya trae Java en vez de escribir bitmaps a mano.
+     */
+    public static void guardarIco(File destino) throws IOException {
+        List<byte[]> pngs = new ArrayList<>();
+        for (int tamano : TAMANOS) {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            ImageIO.write(crear(tamano), "png", buffer);
+            pngs.add(buffer.toByteArray());
+        }
+
+        int cabecera = 6 + 16 * pngs.size();
+        try (DataOutputStream salida = new DataOutputStream(
+                new BufferedOutputStream(new FileOutputStream(destino)))) {
+            escribirCorto(salida, 0);               // reservado
+            escribirCorto(salida, 1);               // tipo: icono
+            escribirCorto(salida, pngs.size());
+
+            int desplazamiento = cabecera;
+            for (int i = 0; i < pngs.size(); i++) {
+                int tamano = TAMANOS[i];
+                // 0 significa 256: el byte no llega a mas
+                salida.writeByte(tamano >= 256 ? 0 : tamano);
+                salida.writeByte(tamano >= 256 ? 0 : tamano);
+                salida.writeByte(0);                // paleta
+                salida.writeByte(0);                // reservado
+                escribirCorto(salida, 1);           // planos
+                escribirCorto(salida, 32);          // bits por pixel
+                escribirEntero(salida, pngs.get(i).length);
+                escribirEntero(salida, desplazamiento);
+                desplazamiento += pngs.get(i).length;
+            }
+            for (byte[] png : pngs) {
+                salida.write(png);
+            }
+        }
+    }
+
+    /** El .ico va en little endian, al contrario que DataOutputStream. */
+    private static void escribirCorto(DataOutputStream salida, int valor)
+            throws IOException {
+        salida.writeByte(valor & 0xFF);
+        salida.writeByte((valor >> 8) & 0xFF);
+    }
+
+    private static void escribirEntero(DataOutputStream salida, int valor)
+            throws IOException {
+        salida.writeByte(valor & 0xFF);
+        salida.writeByte((valor >> 8) & 0xFF);
+        salida.writeByte((valor >> 16) & 0xFF);
+        salida.writeByte((valor >> 24) & 0xFF);
+    }
+
+    /** Para poder generar el .ico desde un script sin abrir la ventana. */
+    public static void main(String[] args) throws IOException {
+        File destino = new File(args.length > 0 ? args[0] : "piano.ico");
+        guardarIco(destino);
+        System.out.println("icono escrito en " + destino.getAbsolutePath()
+                + " (" + destino.length() + " bytes)");
     }
 
     private static BufferedImage crear(int tamano) {

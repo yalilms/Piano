@@ -38,3 +38,6 @@ lib/*.jar
 capturas/
 
 out-test/
+
+### Icono generado ###
+piano.ico

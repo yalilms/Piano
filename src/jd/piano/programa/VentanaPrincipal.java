@@ -21,6 +21,7 @@ import javax.swing.Timer;
 import javax.swing.TransferHandler;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
@@ -59,6 +60,8 @@ public class VentanaPrincipal extends JFrame {
     private final SintetizadorTeclado sintetizador;
     private final PanelCanales panelCanales;
     private final JCheckBox encadenar;
+    private final Bateria bateria;
+    private final JComboBox<String> selectorInstrumento;
     private String rutaActual;
     private Cascada cascada;
 
@@ -76,6 +79,9 @@ public class VentanaPrincipal extends JFrame {
         // silenciar canales.
         this.reproductor.setSintetizador(this.sintetizador.getSintetizador());
         this.panelCanales = new PanelCanales(this.reproductor);
+        this.bateria = new Bateria();
+        this.reproductor.setBateria(this.bateria);
+
         this.rutaActual = null;
         this.cascada = null;
         this.escena = new Escena(Math.max(400, ancho - 240), Math.max(300, alto - 120));
@@ -83,6 +89,14 @@ public class VentanaPrincipal extends JFrame {
         this.lienzo.setAlRedimensionar(this::recolocar);
         this.lienzo.setSintetizador(this.sintetizador);
         this.lienzo.setAlPulsarEspacio(this.reproductor::alternarPausa);
+
+        this.selectorInstrumento = new JComboBox<>(PanelCanales.nombresDeInstrumento());
+        this.selectorInstrumento.setToolTipText("Con que instrumento tocas tu");
+        this.selectorInstrumento.addActionListener(e -> {
+            this.sintetizador.setPrograma(this.selectorInstrumento.getSelectedIndex());
+            // Devolver el foco al piano, que si no hay que volver a hacer clic
+            this.lienzo.requestFocusInWindow();
+        });
 
         Image fondo = cargarFondo();
         if (fondo != null) {
@@ -116,9 +130,14 @@ public class VentanaPrincipal extends JFrame {
             this.escena.prepararCaches();
         });
 
+        JPanel tocasCon = new JPanel(new BorderLayout(4, 0));
+        tocasCon.add(new JLabel(" Tocas con "), BorderLayout.WEST);
+        tocasCon.add(this.selectorInstrumento, BorderLayout.CENTER);
+
         JPanel casillas = new JPanel(new BorderLayout());
         casillas.add(verNombres, BorderLayout.NORTH);
-        casillas.add(this.encadenar, BorderLayout.SOUTH);
+        casillas.add(this.encadenar, BorderLayout.CENTER);
+        casillas.add(tocasCon, BorderLayout.SOUTH);
 
         JPanel arriba = new JPanel(new BorderLayout(0, 4));
         arriba.add(this.selectorModo, BorderLayout.NORTH);
@@ -285,6 +304,10 @@ public class VentanaPrincipal extends JFrame {
                 this.cascada = new Cascada(Partitura.de(ruta), this.reproductor);
                 this.escena.anadirSuperpuesta(this.cascada);
             }
+            this.bateria.construir(analisis.getPercusionUsada());
+            if (!this.bateria.estaVacia()) {
+                this.escena.anadirSuperpuesta(this.bateria);
+            }
             this.escena.anadirSuperpuesta(new Particulas());
 
             recolocar();
@@ -335,8 +358,15 @@ public class VentanaPrincipal extends JFrame {
                 : (this.escena.getAltura() - piano.getAltura()) / 2;
         piano.setPosicion((this.escena.getAnchura() - piano.getAnchura()) / 2, y);
 
+        // Los pads de bateria ocupan la franja de arriba y la cascada empieza
+        // por debajo de ellos, para que no se pisen
+        int arriba = MARGEN / 2;
+        if (!this.bateria.estaVacia()) {
+            this.bateria.setZona(new Rectangle(arriba, arriba,
+                    this.escena.getAnchura() - 2 * arriba, 0));
+            arriba += this.bateria.getAlturaNecesaria() + MARGEN / 3;
+        }
         if (this.cascada != null) {
-            int arriba = MARGEN / 2;
             this.cascada.setZona(arriba,
                     y - piano.getMedidas().getAlturaFieltro() - arriba);
         }

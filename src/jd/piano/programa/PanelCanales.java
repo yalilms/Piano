@@ -6,6 +6,7 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.BorderLayout;
@@ -46,11 +47,23 @@ public class PanelCanales extends JPanel {
             this.canales.add(canal);
             add(crearFila(canal, analisis.getInstrumento(canal)));
         }
+        if (analisis.getTotalPercusion() > 0) {
+            add(crearFilaPercusion(analisis));
+        }
         if (usados.size() > 1) {
             add(crearBotonTodos());
         }
         revalidate();
         repaint();
+    }
+
+    /** Los 128 nombres de General MIDI, para los desplegables. */
+    static String[] nombresDeInstrumento() {
+        String[] nombres = new String[InstrumentosGM.cuantos()];
+        for (int i = 0; i < nombres.length; i++) {
+            nombres[i] = InstrumentosGM.nombre(i);
+        }
+        return nombres;
     }
 
     private JPanel crearFila(int canal, String instrumento) {
@@ -61,8 +74,14 @@ public class PanelCanales extends JPanel {
                 this.reproductor.setSilenciado(canal, !interruptor.isSelected()));
         this.interruptores.add(interruptor);
 
-        JLabel nombre = new JLabel(instrumento);
-        nombre.setToolTipText("Canal " + (canal + 1) + ": " + instrumento);
+        // Desplegable con los 128 instrumentos: se puede cambiar lo que suena
+        // en esta pista sin tocar el fichero
+        JComboBox<String> selector = new JComboBox<>(nombresDeInstrumento());
+        selector.setSelectedItem(instrumento);
+        selector.setToolTipText("Canal " + (canal + 1)
+                + ": cambia el instrumento de esta pista");
+        selector.addActionListener(e ->
+                this.reproductor.setProgramaDeCanal(canal, selector.getSelectedIndex()));
 
         JButton solo = new JButton("solo");
         solo.setMargin(new java.awt.Insets(0, 4, 0, 4));
@@ -74,8 +93,35 @@ public class PanelCanales extends JPanel {
         izquierda.add(interruptor);
         izquierda.add(new Muestra(Estilo.colorDeCanal(canal)));
         fila.add(izquierda, BorderLayout.WEST);
-        fila.add(nombre, BorderLayout.CENTER);
+        fila.add(selector, BorderLayout.CENTER);
         fila.add(solo, BorderLayout.EAST);
+        return fila;
+    }
+
+    /**
+     * La bateria va aparte: en el canal 10 la nota es una pieza, no una altura,
+     * asi que no tiene instrumento que elegir, solo se puede silenciar.
+     */
+    private JPanel crearFilaPercusion(AnalisisMidi analisis) {
+        int canal = 9;
+        JCheckBox interruptor = new JCheckBox();
+        interruptor.setSelected(true);
+        interruptor.setToolTipText("Silenciar o reactivar la bateria");
+        interruptor.addActionListener(e ->
+                this.reproductor.setSilenciado(canal, !interruptor.isSelected()));
+        this.interruptores.add(interruptor);
+        this.canales.add(canal);
+
+        JLabel nombre = new JLabel("Bateria ("
+                + analisis.getPercusionUsada().size() + " piezas)");
+        nombre.setToolTipText(analisis.getTotalPercusion() + " golpes en la cancion");
+
+        JPanel fila = new JPanel(new BorderLayout(4, 0));
+        JPanel izquierda = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
+        izquierda.add(interruptor);
+        izquierda.add(new Muestra(Estilo.colorDeCanal(canal)));
+        fila.add(izquierda, BorderLayout.WEST);
+        fila.add(nombre, BorderLayout.CENTER);
         return fila;
     }
 

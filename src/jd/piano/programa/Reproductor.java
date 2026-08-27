@@ -49,6 +49,19 @@ public class Reproductor implements Receiver {
      */
     private Synthesizer sintetizador;
 
+    /**
+     * Por donde salen los mensajes hacia el sintetizador. Antes el secuenciador
+     * iba conectado por su cuenta y no se podia intervenir lo que llegaba;
+     * ahora pasa todo por aqui, y eso es lo que permite cambiar el instrumento
+     * de un canal o cortarlo de verdad.
+     */
+    private Receiver salidaAlSintetizador;
+
+    /** Instrumento forzado por canal, o -1 si manda la cancion. */
+    private final int[] programaForzado = new int[16];
+
+    private Bateria bateria;
+
     public Reproductor() {
         this.secuenciador = null;
         this.transmisor = null;
@@ -56,12 +69,57 @@ public class Reproductor implements Receiver {
         this.duracionUs = 0;
         this.sintetizador = null;
         this.notasTocadas = 0;
+        this.salidaAlSintetizador = null;
+        this.bateria = null;
+        java.util.Arrays.fill(this.programaForzado, -1);
     }
 
     public void setSintetizador(Synthesizer sintetizador) {
         this.sintetizador = sintetizador;
+        this.salidaAlSintetizador = null;
+        if (sintetizador != null) {
+            try {
+                this.salidaAlSintetizador = sintetizador.getReceiver();
+            } catch (Exception error) {
+                this.salidaAlSintetizador = null;
+            }
+        }
         for (int canal = 0; canal < this.silenciado.length; canal++) {
             aplicarSilencio(canal);
+        }
+    }
+
+    /** Donde se pintan los golpes de bateria del canal 10. */
+    public void setBateria(Bateria bateria) {
+        this.bateria = bateria;
+    }
+
+    /**
+     * Fuerza el instrumento de un canal, o lo devuelve a lo que diga la
+     * cancion con -1. Se reaplica cada vez que el fichero manda su propio
+     * cambio de programa, que si no lo pisaria.
+     */
+    public void setProgramaDeCanal(int canal, int programa) {
+        if (canal < 0 || canal >= this.programaForzado.length) {
+            return;
+        }
+        this.programaForzado[canal] = programa;
+        if (programa >= 0) {
+            enviarCambioDePrograma(canal, programa);
+        }
+    }
+
+    public int getProgramaForzado(int canal) {
+        return canal >= 0 && canal < this.programaForzado.length
+                ? this.programaForzado[canal] : -1;
+    }
+
+    private void enviarCambioDePrograma(int canal, int programa) {
+        if (this.sintetizador != null) {
+            MidiChannel[] canales = this.sintetizador.getChannels();
+            if (canal < canales.length && canales[canal] != null) {
+                canales[canal].programChange(programa);
+            }
         }
     }
 
@@ -99,7 +157,10 @@ public class Reproductor implements Receiver {
     public void cargar(String ruta) throws Exception {
         cerrar();
         Sequence secuencia = MidiSystem.getSequence(new File(ruta));
-        this.secuenciador = MidiSystem.getSequencer();
+        // Sin conectar al dispositivo por defecto: los mensajes pasan por este
+        // receptor y de aqui al sintetizador, para poder intervenirlos. Si no
+        // hay sintetizador se pide conectado, o no sonaria nada.
+        this.secuenciador = MidiSystem.getSequencer(this.salidaAlSintetizador == null);
         this.secuenciador.open();
         this.secuenciador.setSequence(secuencia);
         this.transmisor = this.secuenciador.getTransmitter();
@@ -111,6 +172,7 @@ public class Reproductor implements Receiver {
         for (int canal = 0; canal < this.silenciado.length; canal++) {
             this.silenciado[canal] = false;
             aplicarSilencio(canal);
+            this.programaForzado[canal] = -1;
         }
     }
 
@@ -206,21 +268,27 @@ public class Reproductor implements Receiver {
         if (this.piano != null) {
             this.piano.soltarTodas();
         }
+        if (this.bateria != null) {
+            this.bateria.apagarTodo();
+        }
     }
 
     @Override
     public void send(MidiMessage mensaje, long marcaDeTiempo) {
-        if (this.piano == null || !(mensaje instanceof ShortMessage sm)) {
+        if (!(mensaje instanceof ShortMessage sm)) {
+            reenviar(mensaje, marcaDeTiempo);
             return;
         }
         int canal = sm.getChannel();
-        if (canal == CANAL_PERCUSION) {
-            return;
-        }
         int comando = sm.getCommand();
 
+        if (canal == CANAL_PERCUSION) {
+            atenderPercusion(sm, marcaDeTiempo);
+            return;
+        }
+
         // Un canal silenciado no enciende nada, pero los apagados si pasan: si
-        // no, una nota que estuviera sonando al silenciarlo se quedaba
+        // no, una nota que estuviera sonando al silenciarlo se quedaria
         // encendida para siempre.
         boolean apaga = comando == ShortMessage.NOTE_OFF
                 || (comando == ShortMessage.NOTE_ON && sm.getData2() == 0);
@@ -228,6 +296,39 @@ public class Reproductor implements Receiver {
             return;
         }
 
+        // Si el usuario ha forzado el instrumento de este canal, el cambio de
+        // programa de la cancion no debe pisarlo
+        if (comando == ShortMessage.PROGRAM_CHANGE
+                && this.programaForzado[canal] >= 0) {
+            enviarCambioDePrograma(canal, this.programaForzado[canal]);
+            return;
+        }
+
+        reenviar(mensaje, marcaDeTiempo);
+        actualizarTeclado(sm, canal, comando);
+    }
+
+    /**
+     * En el canal 10 la nota es una pieza de bateria, no una altura, asi que va
+     * a los pads y no al piano. Antes se descartaba: eran el 35% de las notas.
+     */
+    private void atenderPercusion(ShortMessage sm, long marcaDeTiempo) {
+        if (this.silenciado[CANAL_PERCUSION]
+                && sm.getCommand() == ShortMessage.NOTE_ON && sm.getData2() > 0) {
+            return;
+        }
+        reenviar(sm, marcaDeTiempo);
+        if (this.bateria != null && sm.getCommand() == ShortMessage.NOTE_ON
+                && sm.getData2() > 0) {
+            this.notasTocadas++;
+            this.bateria.golpear(sm.getData1(), sm.getData2());
+        }
+    }
+
+    private void actualizarTeclado(ShortMessage sm, int canal, int comando) {
+        if (this.piano == null) {
+            return;
+        }
         // Muchos MIDI apagan las notas con este controlador en vez de con
         // NOTE_OFF. Sin atenderlo se quedaban teclas encendidas para siempre.
         if (comando == ShortMessage.CONTROL_CHANGE) {
@@ -253,6 +354,13 @@ public class Reproductor implements Receiver {
             }
         } else if (comando == ShortMessage.NOTE_OFF) {
             tecla.soltar();
+        }
+    }
+
+    /** Deja pasar el mensaje hacia el sintetizador, si lo hay. */
+    private void reenviar(MidiMessage mensaje, long marcaDeTiempo) {
+        if (this.salidaAlSintetizador != null) {
+            this.salidaAlSintetizador.send(mensaje, marcaDeTiempo);
         }
     }
 

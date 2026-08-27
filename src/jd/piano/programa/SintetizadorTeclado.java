@@ -58,6 +58,7 @@ public class SintetizadorTeclado {
     private MidiChannel canal;
     private Piano piano;
     private int octava;
+    private int programa;
 
     /** Que nota esta sonando por cada tecla del ordenador pulsada. */
     private final Map<Integer, Integer> sonando = new HashMap<>();
@@ -67,6 +68,7 @@ public class SintetizadorTeclado {
         this.canal = null;
         this.piano = null;
         this.octava = 0;
+        this.programa = 0;
     }
 
     public void conectar(Piano piano) {
@@ -82,7 +84,7 @@ public class SintetizadorTeclado {
             this.sintetizador = MidiSystem.getSynthesizer();
             this.sintetizador.open();
             this.canal = this.sintetizador.getChannels()[CANAL];
-            this.canal.programChange(0);
+            this.canal.programChange(this.programa);
         } catch (Exception error) {
             System.out.println("Aviso: sin sintetizador, el teclado no sonara ("
                     + error.getMessage() + ")");
@@ -98,6 +100,23 @@ public class SintetizadorTeclado {
             this.sintetizador = null;
             this.canal = null;
         }
+    }
+
+    /**
+     * Con que instrumento se toca. El banco que trae Java tiene los 128 de
+     * General MIDI cargados desde el arranque, asi que solo hace falta pedir
+     * el cambio de programa.
+     */
+    public void setPrograma(int programa) {
+        this.programa = Math.max(0, Math.min(127, programa));
+        soltarTodo();
+        if (this.canal != null) {
+            this.canal.programChange(this.programa);
+        }
+    }
+
+    public int getPrograma() {
+        return this.programa;
     }
 
     /** El sintetizador abierto, para que el reproductor pueda silenciar canales. */

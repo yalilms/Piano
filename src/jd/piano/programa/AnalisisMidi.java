@@ -27,20 +27,27 @@ public final class AnalisisMidi {
     private final int notaMaxima;
     private final int totalNotas;
     private final int[] programaPorCanal;
+    private final List<Integer> percusionUsada;
+    private final int totalPercusion;
 
     private AnalisisMidi(List<Integer> canalesUsados, int notaMinima,
-                         int notaMaxima, int totalNotas, int[] programaPorCanal) {
+                         int notaMaxima, int totalNotas, int[] programaPorCanal,
+                         List<Integer> percusionUsada, int totalPercusion) {
         this.canalesUsados = canalesUsados;
         this.notaMinima = notaMinima;
         this.notaMaxima = notaMaxima;
         this.totalNotas = totalNotas;
         this.programaPorCanal = programaPorCanal;
+        this.percusionUsada = percusionUsada;
+        this.totalPercusion = totalPercusion;
     }
 
     public static AnalisisMidi de(String ruta) throws Exception {
         Sequence secuencia = MidiSystem.getSequence(new File(ruta));
         boolean[] vistos = new boolean[CANALES];
         int[] programa = new int[CANALES];
+        boolean[] percusion = new boolean[128];
+        int golpes = 0;
         int minima = Integer.MAX_VALUE;
         int maxima = Integer.MIN_VALUE;
         int total = 0;
@@ -56,9 +63,15 @@ public final class AnalisisMidi {
                     programa[sm.getChannel()] = sm.getData1();
                     continue;
                 }
-                boolean esNota = sm.getCommand() == ShortMessage.NOTE_ON
-                        && sm.getData2() > 0
-                        && sm.getChannel() != CANAL_PERCUSION;
+                boolean suena = sm.getCommand() == ShortMessage.NOTE_ON
+                        && sm.getData2() > 0;
+                if (suena && sm.getChannel() == CANAL_PERCUSION) {
+                    // La percusion se cuenta aparte: en ese canal la nota es un
+                    // instrumento, no una altura
+                    percusion[sm.getData1()] = true;
+                    golpes++;
+                }
+                boolean esNota = suena && sm.getChannel() != CANAL_PERCUSION;
                 if (esNota) {
                     vistos[sm.getChannel()] = true;
                     minima = Math.min(minima, sm.getData1());
@@ -80,7 +93,14 @@ public final class AnalisisMidi {
             minima = 48;
             maxima = 72;
         }
-        return new AnalisisMidi(canales, minima, maxima, total, programa);
+        List<Integer> piezas = new ArrayList<>();
+        for (int nota = 0; nota < percusion.length; nota++) {
+            if (percusion[nota]) {
+                piezas.add(nota);
+            }
+        }
+        return new AnalisisMidi(canales, minima, maxima, total, programa,
+                piezas, golpes);
     }
 
     public List<Integer> getCanalesUsados() {
@@ -106,6 +126,15 @@ public final class AnalisisMidi {
             programa = this.programaPorCanal[canal];
         }
         return programa;
+    }
+
+    /** Notas de percusion que usa la cancion, o vacia si no tiene bateria. */
+    public List<Integer> getPercusionUsada() {
+        return new ArrayList<>(this.percusionUsada);
+    }
+
+    public int getTotalPercusion() {
+        return this.totalPercusion;
     }
 
     public String getInstrumento(int canal) {

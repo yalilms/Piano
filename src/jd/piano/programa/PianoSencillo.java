@@ -112,6 +112,15 @@ public class PianoSencillo extends Piano {
     }
 
     @Override
+    public void soltarTodas() {
+        for (Tecla tecla : this.teclas.values()) {
+            if (tecla.estaPulsado()) {
+                tecla.soltar();
+            }
+        }
+    }
+
+    @Override
     public void dibujarBrillos(Graphics2D g) {
         for (Tecla tecla : this.teclas.values()) {
             tecla.dibujarBrillo(g);

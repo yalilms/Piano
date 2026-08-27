@@ -33,6 +33,13 @@ public abstract class Piano implements ElementoVisual {
     public abstract MedidasTeclado getMedidas();
 
     /**
+     * Suelta todas las teclas. Hace falta al pausar, parar o saltar de
+     * posicion: el secuenciador no manda los NOTE_OFF de las notas que estaban
+     * sonando y se quedarian encendidas para siempre.
+     */
+    public abstract void soltarTodas();
+
+    /**
      * Dibuja el teclado apagado, ignorando que teclas estan pulsadas.
      * La Escena lo usa para hornear su imagen cacheada, y necesita que salga
      * en reposo aunque la cancion ya este sonando.

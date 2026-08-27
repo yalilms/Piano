@@ -126,6 +126,13 @@ public class MultiPiano extends Piano {
     }
 
     @Override
+    public void soltarTodas() {
+        for (PianoSencillo piano : this.pianos) {
+            piano.soltarTodas();
+        }
+    }
+
+    @Override
     public void dibujarBrillos(Graphics2D g) {
         for (PianoSencillo piano : this.pianos) {
             piano.dibujarBrillos(g);

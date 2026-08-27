@@ -214,12 +214,26 @@ public class Reproductor implements Receiver {
         }
     }
 
-    /** Salta a un punto de la cancion, en microsegundos. */
+    /**
+     * Salta a un punto de la cancion, en microsegundos.
+     *
+     * Hay que pararlo, mover la posicion y volver a arrancarlo: el
+     * secuenciador de Java ignora setMicrosecondPosition mientras esta en
+     * marcha, asi que pinchar en la barra de progreso no hacia nada.
+     */
     public void buscar(long microsegundos) {
-        if (this.secuenciador != null) {
-            long destino = Math.max(0, Math.min(this.duracionUs, microsegundos));
-            this.secuenciador.setMicrosecondPosition(destino);
-            apagarTeclado();
+        if (this.secuenciador == null) {
+            return;
+        }
+        long destino = Math.max(0, Math.min(this.duracionUs, microsegundos));
+        boolean sonaba = this.secuenciador.isRunning();
+        if (sonaba) {
+            this.secuenciador.stop();
+        }
+        this.secuenciador.setMicrosecondPosition(destino);
+        apagarTeclado();
+        if (sonaba) {
+            this.secuenciador.start();
         }
     }
 

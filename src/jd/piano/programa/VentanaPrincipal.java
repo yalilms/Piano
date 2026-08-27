@@ -61,6 +61,8 @@ public class VentanaPrincipal extends JFrame {
     private final PanelCanales panelCanales;
     private final JCheckBox encadenar;
     private final Bateria bateria;
+    private final JCheckBox modoAprendizaje;
+    private ModoAprendizaje aprendizaje;
     private final JComboBox<String> selectorInstrumento;
     private String rutaActual;
     private Cascada cascada;
@@ -81,6 +83,18 @@ public class VentanaPrincipal extends JFrame {
         this.panelCanales = new PanelCanales(this.reproductor);
         this.bateria = new Bateria();
         this.reproductor.setBateria(this.bateria);
+        this.aprendizaje = null;
+        this.modoAprendizaje = new JCheckBox("Modo aprendizaje");
+        this.modoAprendizaje.setToolTipText(
+                "La cancion espera a que toques la nota que viene");
+        this.modoAprendizaje.addActionListener(e -> {
+            if (this.aprendizaje != null) {
+                this.aprendizaje.setActivo(this.modoAprendizaje.isSelected());
+            }
+            if (!this.modoAprendizaje.isSelected()) {
+                this.reproductor.reproducir();
+            }
+        });
 
         this.rutaActual = null;
         this.cascada = null;
@@ -136,7 +150,10 @@ public class VentanaPrincipal extends JFrame {
 
         JPanel casillas = new JPanel(new BorderLayout());
         casillas.add(verNombres, BorderLayout.NORTH);
-        casillas.add(this.encadenar, BorderLayout.CENTER);
+        JPanel casillasMedio = new JPanel(new BorderLayout());
+        casillasMedio.add(this.encadenar, BorderLayout.NORTH);
+        casillasMedio.add(this.modoAprendizaje, BorderLayout.SOUTH);
+        casillas.add(casillasMedio, BorderLayout.CENTER);
         casillas.add(tocasCon, BorderLayout.SOUTH);
 
         JPanel arriba = new JPanel(new BorderLayout(0, 4));
@@ -300,9 +317,22 @@ public class VentanaPrincipal extends JFrame {
             this.escena.quitarSuperpuestas();
             if (multi) {
                 this.cascada = null;
+                this.aprendizaje = null;
+                this.modoAprendizaje.setText("Modo aprendizaje");
             } else {
-                this.cascada = new Cascada(Partitura.de(ruta), this.reproductor);
+                Partitura partitura = Partitura.de(ruta);
+                this.cascada = new Cascada(partitura, this.reproductor);
                 this.escena.anadirSuperpuesta(this.cascada);
+
+                // El modo aprendizaje vigila un solo canal: exigir los trece a
+                // la vez no habria manera de tocarlo
+                int canal = ModoAprendizaje.canalDeMelodia(partitura);
+                this.aprendizaje = new ModoAprendizaje(partitura, this.reproductor,
+                        canal);
+                this.aprendizaje.setActivo(this.modoAprendizaje.isSelected());
+                this.escena.anadirSuperpuesta(this.aprendizaje);
+                this.modoAprendizaje.setText("Modo aprendizaje ("
+                        + analisis.getInstrumento(canal) + ")");
             }
             this.bateria.construir(analisis.getPercusionUsada());
             if (!this.bateria.estaVacia()) {

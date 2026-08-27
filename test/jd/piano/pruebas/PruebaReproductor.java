@@ -64,8 +64,20 @@ public final class PruebaReproductor {
                     Math.abs(r.getPosicionUs() - enPausa) < 60_000);
 
             r.buscar(r.getDuracionUs() / 2);
-            c.comprobar("buscar mueve la posicion",
+            c.comprobar("buscar en pausa mueve la posicion",
                     Math.abs(r.getPosicionUs() - r.getDuracionUs() / 2) < 600_000);
+
+            // El caso que se colaba: buscar MIENTRAS suena. El secuenciador de
+            // Java ignora el cambio de posicion si esta en marcha, asi que hay
+            // que pararlo y volver a arrancarlo.
+            r.reproducir();
+            Thread.sleep(200);
+            long destino = r.getDuracionUs() / 4;
+            r.buscar(destino);
+            c.comprobar("buscar sonando mueve la posicion",
+                    Math.abs(r.getPosicionUs() - destino) < 600_000);
+            c.comprobar("y sigue sonando despues de buscar", r.estaSonando());
+            r.pausar();
             r.buscar(-9_000_000);
             c.comprobar("buscar antes del principio se queda en 0",
                     r.getPosicionUs() == 0);

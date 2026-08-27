@@ -15,6 +15,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.util.function.Consumer;
 
 /**
  * El panel donde se pinta el piano. Muestra una Escena, la repinta
@@ -30,8 +31,11 @@ public class Lienzo extends JPanel {
     /** Se ejecuta cuando cambia el tamano, para recolocar el piano. */
     private Runnable alRedimensionar;
 
-    /** Se ejecuta al pulsar espacio. */
-    private Runnable alPulsarEspacio;
+    /**
+     * Que hacer con la barra espaciadora. Recibe true al pulsarla y false al
+     * soltarla: en el modo libre hace de pedal y hay que saber las dos cosas.
+     */
+    private Consumer<Boolean> alEspacio;
 
     /** Nota que esta sonando por el raton, o -1 si ninguna. */
     private int notaDelRaton;
@@ -39,7 +43,7 @@ public class Lienzo extends JPanel {
     public Lienzo(Escena escena) {
         this.escena = escena;
         this.alRedimensionar = null;
-        this.alPulsarEspacio = null;
+        this.alEspacio = null;
         this.sintetizador = null;
         this.notaDelRaton = -1;
 
@@ -60,9 +64,8 @@ public class Lienzo extends JPanel {
         new Timer(REFRESCO_MS, e -> repaint()).start();
     }
 
-    /** Que hacer al pulsar espacio: normalmente pausar o reanudar. */
-    public void setAlPulsarEspacio(Runnable accion) {
-        this.alPulsarEspacio = accion;
+    public void setAlEspacio(Consumer<Boolean> accion) {
+        this.alEspacio = accion;
     }
 
     private void anadirTeclado() {
@@ -70,8 +73,8 @@ public class Lienzo extends JPanel {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    if (Lienzo.this.alPulsarEspacio != null) {
-                        Lienzo.this.alPulsarEspacio.run();
+                    if (Lienzo.this.alEspacio != null) {
+                        Lienzo.this.alEspacio.accept(true);
                     }
                 } else if (Lienzo.this.sintetizador != null) {
                     Lienzo.this.sintetizador.pulsarTecla(e.getKeyCode());
@@ -80,7 +83,11 @@ public class Lienzo extends JPanel {
 
             @Override
             public void keyReleased(KeyEvent e) {
-                if (Lienzo.this.sintetizador != null) {
+                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    if (Lienzo.this.alEspacio != null) {
+                        Lienzo.this.alEspacio.accept(false);
+                    }
+                } else if (Lienzo.this.sintetizador != null) {
                     Lienzo.this.sintetizador.soltarTecla(e.getKeyCode());
                 }
             }

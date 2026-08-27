@@ -27,6 +27,9 @@ public class SintetizadorTeclado {
     /** Canal reservado para lo que toca el usuario. */
     public static final int CANAL = 15;
 
+    /** Controlador del pedal de resonancia en MIDI. */
+    private static final int CC_SOSTENIDO = 64;
+
     private static final int NOTA_BASE = 60;
     private static final int VELOCIDAD = 96;
     private static final int OCTAVA_MINIMA = -3;
@@ -59,6 +62,7 @@ public class SintetizadorTeclado {
     private Piano piano;
     private int octava;
     private int programa;
+    private boolean sostenido;
 
     /** Que nota esta sonando por cada tecla del ordenador pulsada. */
     private final Map<Integer, Integer> sonando = new HashMap<>();
@@ -69,6 +73,7 @@ public class SintetizadorTeclado {
         this.piano = null;
         this.octava = 0;
         this.programa = 0;
+        this.sostenido = false;
     }
 
     public void conectar(Piano piano) {
@@ -119,6 +124,22 @@ public class SintetizadorTeclado {
         return this.programa;
     }
 
+    /**
+     * Pedal de resonancia. Se manda como el controlador 64, que el
+     * sintetizador ya sabe interpretar: mantiene el sonido de las notas
+     * soltadas hasta que se levanta.
+     */
+    public void setSostenido(boolean pisado) {
+        this.sostenido = pisado;
+        if (this.canal != null) {
+            this.canal.controlChange(CC_SOSTENIDO, pisado ? 127 : 0);
+        }
+    }
+
+    public boolean isSostenido() {
+        return this.sostenido;
+    }
+
     /** El sintetizador abierto, para que el reproductor pueda silenciar canales. */
     public Synthesizer getSintetizador() {
         return this.sintetizador;
@@ -167,7 +188,7 @@ public class SintetizadorTeclado {
         }
         Tecla tecla = teclaDe(nota);
         if (tecla != null) {
-            tecla.setColorPulsado(Estilo.colorDeCanal(CANAL));
+            tecla.setColorPulsado(Estilo.COLOR_USUARIO);
             tecla.pulsar(VELOCIDAD);
         }
     }

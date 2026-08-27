@@ -56,6 +56,13 @@ public final class Estilo {
             new Color(201, 193, 31),   new Color(154, 154, 154)
     };
 
+    /**
+     * Color de lo que toca el usuario. Aparte de la paleta de canales: lo que
+     * uno toca suena por el canal 16, y ese color es un gris neutro que sobre
+     * madera se ve deslavado. Este azul claro no lo usa ningun canal.
+     */
+    public static final Color COLOR_USUARIO = new Color(96, 214, 255);
+
     public static Color colorDeCanal(int canal) {
         return COLORES_CANAL[((canal % COLORES_CANAL.length) + COLORES_CANAL.length)
                 % COLORES_CANAL.length];

@@ -66,6 +66,19 @@ public class PanelCanales extends JPanel {
         return nombres;
     }
 
+    /** En el modo libre no hay canales que mezclar: se explica y ya. */
+    public void mostrarLibre() {
+        removeAll();
+        this.interruptores.clear();
+        this.canales.clear();
+        JLabel aviso = new JLabel("<html><i>Sin cancion.<br>"
+                + "El teclado es todo tuyo.</i></html>");
+        aviso.setBorder(BorderFactory.createEmptyBorder(4, 6, 4, 6));
+        add(aviso);
+        revalidate();
+        repaint();
+    }
+
     private JPanel crearFila(int canal, String instrumento) {
         JCheckBox interruptor = new JCheckBox();
         interruptor.setSelected(true);

@@ -10,6 +10,25 @@ ilumina al ritmo de la canción, y también se puede tocar.
 Proyecto académico grupal realizado para el Grado Superior en Desarrollo de
 Aplicaciones Multiplataforma (DAM) en el IES Hermenegildo Lanz (Granada).
 
+## 🎛️ Cuatro modos de uso
+
+Se eligen en el menú **Modo**, o con `Ctrl+1` a `Ctrl+4`.
+
+| Modo | Qué hace |
+|---|---|
+| **Ver una canción** | Un teclado con las notas cayendo |
+| **Ver por canales** | Un teclado por cada canal de la canción |
+| **Aprender a tocarla** | Se para y espera a que toques la nota que viene |
+| **Tocar libre** | Sin canción: el teclado para ti |
+
+### Tocar libre
+
+Sin ninguna canción cargada. Lo que toques deja una barra que crece hacia arriba
+mientras mantienes la tecla y se desvanece al soltarla, con el nombre de la
+última nota en grande. El espacio hace de pedal de resonancia.
+
+![Tocar libre](docs/tocar-libre.png)
+
 ## ✨ Qué hace
 
 - **Notas cayendo** — barras de color que bajan y llegan a su tecla justo cuando
@@ -76,7 +95,8 @@ java -cp "out;lib/*" jd.piano.programa.ProgramaSwing
 | `Z` `S` `X` `D` `C` `V` `G` `B` `H` `N` `J` `M` | Una octava: las letras de abajo son blancas, las de encima negras |
 | `Q` `2` `W` `3` `E` `R` `5` `T` `6` `Y` `7` `U` `I` | La octava siguiente |
 | `←` `→` | Baja o sube una octava |
-| Espacio | Pausa y reanuda |
+| Espacio | Pausa, o pedal de resonancia en el modo libre |
+| `Ctrl+1` a `Ctrl+4` | Cambiar de modo |
 | Clic y arrastre en las teclas | Toca con el ratón |
 
 Lo que tocas suena por el canal 16, que es el que menos usan los ficheros MIDI,
@@ -99,10 +119,12 @@ src/jd/piano/teclas/     el instrumento: teclas, medidas y estilo
   Estilo                                  paleta y nombres de nota
 
 src/jd/piano/programa/   la aplicación
-  PianoSencillo, MultiPiano               los dos modos
+  PianoSencillo, MultiPiano               los dos dibujados de teclado
   Escena, Lienzo, VentanaPrincipal        dibujado y ventana
   Cascada, Particulas, Bateria            capas animadas
+  ModoDeUso, BarraDeMenu                  los cuatro modos y el menu
   ModoAprendizaje                         esperar la nota correcta
+  RastroLibre                             el rastro del modo libre
   Partitura, AnalisisMidi, Reproductor    el MIDI
   InstrumentosGM, PiezasPercusion         nombres de General MIDI
   SintetizadorTeclado                     tocar
@@ -126,7 +148,7 @@ se llegaría a 60 fps.
 .\probar.ps1
 ```
 
-76 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+90 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -147,13 +169,16 @@ puede romper sin darse cuenta:
   barra de progreso no hacía nada, y ninguna comprobación lo cubría.
 - El mapa completo de percusión y el montaje de los pads.
 - Que el modo aprendizaje pare al llegar a un acorde y siga al tocarlo.
+- Que los cuatro modos sean coherentes: no puede haber notas cayendo sin
+  canción ni con varios teclados a la vez.
+- Que el rastro del modo libre aparezca al tocar.
 
 Lo que **no** cubren, porque no se puede automatizar sin pantalla ni oído: que
 suene, que el ratón y el teclado respondan como esperas, y que vaya fluido.
 
 ## 📷 Capturas
 
-El botón **Captura** guarda lo que se ve en `capturas/` como PNG.
+El botón **Captura**, o `Ctrl+G`, guarda lo que se ve en `capturas/` como PNG.
 
 ## 👥 Autores
 

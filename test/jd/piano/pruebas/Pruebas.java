@@ -25,6 +25,7 @@ public final class Pruebas {
         resultados.add(PruebaReproductor.ejecutar());
         resultados.add(PruebaInterfaz.ejecutar());
         resultados.add(PruebaAprendizaje.ejecutar());
+        resultados.add(PruebaModos.ejecutar());
 
         int aciertos = 0;
         int fallos = 0;

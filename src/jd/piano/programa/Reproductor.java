@@ -4,12 +4,14 @@ import jd.piano.teclas.Estilo;
 import jd.piano.teclas.Piano;
 import jd.piano.teclas.Tecla;
 
+import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.Receiver;
 import javax.sound.midi.Sequence;
 import javax.sound.midi.Sequencer;
 import javax.sound.midi.ShortMessage;
+import javax.sound.midi.Synthesizer;
 import javax.sound.midi.Transmitter;
 import java.io.File;
 
@@ -35,11 +37,54 @@ public class Reproductor implements Receiver {
     private Piano piano;
     private long duracionUs;
 
+    /** Canales silenciados: no suenan ni encienden teclas. */
+    private final boolean[] silenciado = new boolean[16];
+
+    /**
+     * El sintetizador donde suena la cancion. No lo abre este objeto: se le
+     * pasa el que ya esta abierto, para que solo haya un dueno del dispositivo.
+     */
+    private Synthesizer sintetizador;
+
     public Reproductor() {
         this.secuenciador = null;
         this.transmisor = null;
         this.piano = null;
         this.duracionUs = 0;
+        this.sintetizador = null;
+    }
+
+    public void setSintetizador(Synthesizer sintetizador) {
+        this.sintetizador = sintetizador;
+        for (int canal = 0; canal < this.silenciado.length; canal++) {
+            aplicarSilencio(canal);
+        }
+    }
+
+    /** Silencia o reactiva un canal, en sonido y en imagen. */
+    public void setSilenciado(int canal, boolean silencio) {
+        if (canal < 0 || canal >= this.silenciado.length) {
+            return;
+        }
+        this.silenciado[canal] = silencio;
+        aplicarSilencio(canal);
+        if (silencio && this.piano != null) {
+            // Las teclas que estuvieran encendidas de ese canal se apagan ya
+            this.piano.soltarTodas();
+        }
+    }
+
+    public boolean estaSilenciado(int canal) {
+        return canal >= 0 && canal < this.silenciado.length && this.silenciado[canal];
+    }
+
+    private void aplicarSilencio(int canal) {
+        if (this.sintetizador != null) {
+            MidiChannel[] canales = this.sintetizador.getChannels();
+            if (canal < canales.length && canales[canal] != null) {
+                canales[canal].setMute(this.silenciado[canal]);
+            }
+        }
     }
 
     public void conectar(Piano piano) {
@@ -153,7 +198,7 @@ public class Reproductor implements Receiver {
             return;
         }
         int canal = sm.getChannel();
-        if (canal == CANAL_PERCUSION) {
+        if (canal == CANAL_PERCUSION || this.silenciado[canal]) {
             return;
         }
         int comando = sm.getCommand();

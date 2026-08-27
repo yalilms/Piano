@@ -121,6 +121,26 @@ public class PianoSencillo extends Piano {
     }
 
     @Override
+    public Tecla teclaEn(int x, int y) {
+        Tecla encontrada = buscar(x, y, false);
+        if (encontrada == null) {
+            encontrada = buscar(x, y, true);
+        }
+        return encontrada;
+    }
+
+    /** Las negras primero, que estan dibujadas encima de las blancas. */
+    private Tecla buscar(int x, int y, boolean blancas) {
+        for (Tecla tecla : this.teclas.values()) {
+            boolean esBlanca = tecla instanceof TeclaBlanca;
+            if (esBlanca == blancas && tecla.getForma().contains(x, y)) {
+                return tecla;
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void dibujarBrillos(Graphics2D g) {
         for (Tecla tecla : this.teclas.values()) {
             tecla.dibujarBrillo(g);

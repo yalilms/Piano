@@ -133,6 +133,27 @@ public class MultiPiano extends Piano {
     }
 
     @Override
+    public Tecla teclaEn(int x, int y) {
+        Tecla encontrada = null;
+        for (int i = 0; i < this.pianos.size() && encontrada == null; i++) {
+            encontrada = this.pianos.get(i).teclaEn(x, y);
+        }
+        return encontrada;
+    }
+
+    /** Canal del teclado que hay en ese punto, o -1 si no hay ninguno. */
+    public int canalEn(int x, int y) {
+        int canal = -1;
+        for (int i = 0; i < this.pianos.size() && canal < 0; i++) {
+            Rectangle limites = this.pianos.get(i).getLimites();
+            if (limites != null && limites.contains(x, y)) {
+                canal = this.canales.get(i);
+            }
+        }
+        return canal;
+    }
+
+    @Override
     public void dibujarBrillos(Graphics2D g) {
         for (PianoSencillo piano : this.pianos) {
             piano.dibujarBrillos(g);

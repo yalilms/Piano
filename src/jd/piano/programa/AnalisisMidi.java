@@ -26,18 +26,21 @@ public final class AnalisisMidi {
     private final int notaMinima;
     private final int notaMaxima;
     private final int totalNotas;
+    private final int[] programaPorCanal;
 
     private AnalisisMidi(List<Integer> canalesUsados, int notaMinima,
-                         int notaMaxima, int totalNotas) {
+                         int notaMaxima, int totalNotas, int[] programaPorCanal) {
         this.canalesUsados = canalesUsados;
         this.notaMinima = notaMinima;
         this.notaMaxima = notaMaxima;
         this.totalNotas = totalNotas;
+        this.programaPorCanal = programaPorCanal;
     }
 
     public static AnalisisMidi de(String ruta) throws Exception {
         Sequence secuencia = MidiSystem.getSequence(new File(ruta));
         boolean[] vistos = new boolean[CANALES];
+        int[] programa = new int[CANALES];
         int minima = Integer.MAX_VALUE;
         int maxima = Integer.MIN_VALUE;
         int total = 0;
@@ -46,6 +49,11 @@ public final class AnalisisMidi {
             for (int i = 0; i < pista.size(); i++) {
                 MidiEvent evento = pista.get(i);
                 if (!(evento.getMessage() instanceof ShortMessage sm)) {
+                    continue;
+                }
+                // El primer PROGRAM_CHANGE de cada canal dice que instrumento es
+                if (sm.getCommand() == ShortMessage.PROGRAM_CHANGE) {
+                    programa[sm.getChannel()] = sm.getData1();
                     continue;
                 }
                 boolean esNota = sm.getCommand() == ShortMessage.NOTE_ON
@@ -72,7 +80,7 @@ public final class AnalisisMidi {
             minima = 48;
             maxima = 72;
         }
-        return new AnalisisMidi(canales, minima, maxima, total);
+        return new AnalisisMidi(canales, minima, maxima, total, programa);
     }
 
     public List<Integer> getCanalesUsados() {
@@ -89,6 +97,19 @@ public final class AnalisisMidi {
 
     public int getTotalNotas() {
         return this.totalNotas;
+    }
+
+    /** Numero de programa General MIDI de ese canal, 0 si no lo dice. */
+    public int getPrograma(int canal) {
+        int programa = 0;
+        if (canal >= 0 && canal < this.programaPorCanal.length) {
+            programa = this.programaPorCanal[canal];
+        }
+        return programa;
+    }
+
+    public String getInstrumento(int canal) {
+        return InstrumentosGM.nombre(getPrograma(canal));
     }
 
     /**

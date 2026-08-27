@@ -48,6 +48,8 @@ public class VentanaPrincipal extends JFrame {
     private final JList<File> listaCanciones;
     private final JComboBox<String> selectorModo;
     private final JLabel etiquetaInfo;
+    private final SintetizadorTeclado sintetizador;
+    private final PanelCanales panelCanales;
     private String rutaActual;
     private Cascada cascada;
 
@@ -59,11 +61,19 @@ public class VentanaPrincipal extends JFrame {
         int alto = (int) (pantalla.height * 0.78);
 
         this.reproductor = new Reproductor();
+        this.sintetizador = new SintetizadorTeclado();
+        this.sintetizador.abrir();
+        // Un solo dueno del sintetizador: el reproductor solo lo usa para
+        // silenciar canales.
+        this.reproductor.setSintetizador(this.sintetizador.getSintetizador());
+        this.panelCanales = new PanelCanales(this.reproductor);
         this.rutaActual = null;
         this.cascada = null;
         this.escena = new Escena(Math.max(400, ancho - 240), Math.max(300, alto - 120));
         this.lienzo = new Lienzo(this.escena);
         this.lienzo.setAlRedimensionar(this::recolocar);
+        this.lienzo.setSintetizador(this.sintetizador);
+        this.lienzo.setAlPulsarEspacio(this.reproductor::alternarPausa);
 
         Image fondo = cargarFondo();
         if (fondo != null) {
@@ -87,10 +97,15 @@ public class VentanaPrincipal extends JFrame {
 
         JPanel lateral = new JPanel(new BorderLayout(0, 6));
         lateral.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 4));
-        lateral.setPreferredSize(new Dimension(230, 100));
+        lateral.setPreferredSize(new Dimension(270, 100));
         lateral.add(this.selectorModo, BorderLayout.NORTH);
         lateral.add(new JScrollPane(this.listaCanciones), BorderLayout.CENTER);
-        lateral.add(this.etiquetaInfo, BorderLayout.SOUTH);
+
+        JPanel abajo = new JPanel(new BorderLayout(0, 4));
+        abajo.add(this.etiquetaInfo, BorderLayout.NORTH);
+        abajo.add(new JScrollPane(this.panelCanales), BorderLayout.CENTER);
+        abajo.setPreferredSize(new Dimension(270, 260));
+        lateral.add(abajo, BorderLayout.SOUTH);
 
         setLayout(new BorderLayout());
         add(lateral, BorderLayout.WEST);
@@ -200,15 +215,18 @@ public class VentanaPrincipal extends JFrame {
 
             recolocar();
 
+            this.sintetizador.conectar(piano);
             this.reproductor.conectar(piano);
             this.reproductor.cargar(ruta);
+            this.panelCanales.mostrar(analisis);
             this.reproductor.reproducir();
 
             setTitle("Piano MIDI - " + new File(ruta).getName());
             this.etiquetaInfo.setText("<html>"
+                    + analisis.getTotalNotas() + " notas, "
                     + analisis.getCanalesUsados().size() + " canales<br>"
-                    + analisis.getTotalNotas() + " notas<br>notas "
-                    + analisis.getNotaMinima() + " a " + analisis.getNotaMaxima()
+                    + "<i>Clic en el piano y toca con Z-M y Q-U.<br>"
+                    + "Flechas para cambiar de octava, espacio para pausar.</i>"
                     + "</html>");
         } catch (Exception error) {
             JOptionPane.showMessageDialog(this,
@@ -267,6 +285,7 @@ public class VentanaPrincipal extends JFrame {
     /** Deja seleccionada la primera cancion, si hay alguna. */
     public void arrancar() {
         setVisible(true);
+        this.lienzo.requestFocusInWindow();
         if (!this.modeloCanciones.isEmpty()) {
             this.listaCanciones.setSelectedIndex(0);
         }

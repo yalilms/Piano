@@ -40,6 +40,13 @@ public abstract class Piano implements ElementoVisual {
     public abstract void soltarTodas();
 
     /**
+     * La tecla que hay en ese punto, o null si no hay ninguna. Sale gratis de
+     * tener las teclas como formas: basta preguntarle si contiene el punto.
+     * Las negras se comprueban antes porque estan encima.
+     */
+    public abstract Tecla teclaEn(int x, int y);
+
+    /**
      * Dibuja el teclado apagado, ignorando que teclas estan pulsadas.
      * La Escena lo usa para hornear su imagen cacheada, y necesita que salga
      * en reposo aunque la cancion ya este sonando.

@@ -28,6 +28,7 @@ public final class Pruebas {
         resultados.add(PruebaModos.ejecutar());
         resultados.add(PruebaInstrumentos.ejecutar());
         resultados.add(PruebaConjunto.ejecutar());
+        resultados.add(PruebaTamanos.ejecutar());
 
         int aciertos = 0;
         int fallos = 0;

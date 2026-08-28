@@ -43,7 +43,11 @@ public class Xilofono implements InstrumentoVisual {
     /** Parte del alto que se lleva la fila de atras, la de las alteradas. */
     private static final double PARTE_FILA_ALTA = 0.42;
 
-    private static final int PASO_MINIMO = 7;
+    /**
+     * Paso minimo pequeno a proposito: con 61 barras, un tope alto hacia que el
+     * xilofono se pasara del hueco que le dan y saliera cortado por los lados.
+     */
+    private static final int PASO_MINIMO = 2;
     private static final int PASO_BASE = 24;
 
     private static final Color PALO_ROSA_ALTO = new Color(178, 108, 62);
@@ -188,8 +192,10 @@ public class Xilofono implements InstrumentoVisual {
     public void ajustarA(int ancho, int alto) {
         this.paso = Math.max(PASO_MINIMO, Math.min(PASO_BASE, ancho / this.naturales));
         // Sin tope el instrumento se estiraria hasta ocupar toda la pantalla y
-        // las barras saldrian absurdamente largas
-        this.altoTotal = Math.max(80, Math.min(alto, this.paso * 9));
+        // las barras saldrian absurdamente largas. El minimo se cuela dentro de
+        // lo que hay, no por encima: ajustarA no puede devolver algo mas alto
+        // que el hueco que le dan.
+        this.altoTotal = Math.min(alto, Math.max(40, Math.min(alto, this.paso * 9)));
         colocarBarras();
     }
 

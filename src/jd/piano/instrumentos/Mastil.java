@@ -189,12 +189,20 @@ public class Mastil implements InstrumentoVisual {
         return this.separacionCuerdas * (this.afinacion.length + 1) + ALTO_NUMEROS;
     }
 
+    /**
+     * El minimo es pequeno a proposito: ajustarA promete que el instrumento
+     * cabe en el hueco, y un tope alto lo incumplia. Un mastil de 60 px es poco
+     * util, pero salirse del lienzo y aparecer cortado es peor.
+     */
+    private static final int ANCHO_MASTIL_MINIMO = 60;
+    private static final int SEPARACION_CUERDAS_MINIMA = 4;
+
     @Override
     public void ajustarA(int ancho, int alto) {
-        this.anchoMastil = Math.max(200,
+        this.anchoMastil = Math.max(ANCHO_MASTIL_MINIMO,
                 ancho - MARGEN_IZQUIERDO - MARGEN_DERECHO);
         int cabe = (alto - ALTO_NUMEROS) / (this.afinacion.length + 1);
-        this.separacionCuerdas = Math.max(9,
+        this.separacionCuerdas = Math.max(SEPARACION_CUERDAS_MINIMA,
                 Math.min(SEPARACION_CUERDAS_BASE, cabe));
         colocarPuntos();
     }

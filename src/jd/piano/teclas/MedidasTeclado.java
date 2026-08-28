@@ -19,6 +19,12 @@ public final class MedidasTeclado {
     /** Por debajo de esto las teclas dejan de distinguirse. */
     private static final int ANCHURA_BLANCA_MINIMA = 4;
 
+    /**
+     * Holgura para que las escalas exactas no se caigan al entero de abajo.
+     * 25 * 0,6 en coma flotante da 14,999999999999998, y truncar eso daria 14.
+     */
+    private static final double PELIN = 1e-9;
+
     public static final MedidasTeclado NORMAL = new MedidasTeclado(1.0);
 
     private final double escala;
@@ -28,8 +34,13 @@ public final class MedidasTeclado {
     private final int alturaNegra;
 
     public MedidasTeclado(double escala) {
+        // Truncado y no redondeado, a proposito. Quien pide la escala la ha
+        // calculado para que el teclado quepa justo en el hueco; si el ancho de
+        // tecla se redondea hacia arriba, cada tecla se pasa hasta un pixel y
+        // con 52 blancas el teclado acaba 52 px mas ancho de lo que cabe. Se
+        // centraba, asi que las teclas de los extremos salian cortadas.
         this.anchuraBlanca = Math.max(ANCHURA_BLANCA_MINIMA,
-                (int) Math.round(ANCHURA_BLANCA_BASE * escala));
+                (int) Math.floor(ANCHURA_BLANCA_BASE * escala + PELIN));
         // La escala efectiva se recalcula desde el ancho ya redondeado, para que
         // el resto de medidas sean coherentes con lo que de verdad se dibuja.
         this.escala = (double) this.anchuraBlanca / ANCHURA_BLANCA_BASE;

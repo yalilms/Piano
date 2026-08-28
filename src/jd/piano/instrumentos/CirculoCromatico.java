@@ -35,7 +35,13 @@ public class CirculoCromatico implements InstrumentoVisual {
     private static final int NOTAS = 128;
 
     private static final int DIAMETRO_BASE = 620;
-    private static final int DIAMETRO_MINIMO = 160;
+
+    /**
+     * Minimo bajo a proposito. Con 160 la rueda se salia del hueco en lienzos
+     * pequenos, y ajustarA promete lo contrario: primero cabe, y si sale pequena
+     * es que no habia mas sitio.
+     */
+    private static final int DIAMETRO_MINIMO = 70;
 
     private static final Color ANILLO = new Color(214, 196, 168, 90);
     private static final Color RADIO_TENUE = new Color(214, 196, 168, 38);
@@ -199,8 +205,9 @@ public class CirculoCromatico implements InstrumentoVisual {
 
     @Override
     public void ajustarA(int ancho, int alto) {
-        this.diametro = Math.max(DIAMETRO_MINIMO,
-                Math.min(DIAMETRO_BASE, Math.min(ancho, alto)));
+        int cabe = Math.min(ancho, alto);
+        this.diametro = Math.min(cabe,
+                Math.max(DIAMETRO_MINIMO, Math.min(DIAMETRO_BASE, cabe)));
         colocarNodos();
     }
 

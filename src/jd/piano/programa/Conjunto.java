@@ -36,7 +36,7 @@ public class Conjunto implements InstrumentoVisual {
 
     private static final int CANALES = 16;
 
-    /** Hueco sobre cada instrumento para su rotulo. */
+    /** Hueco sobre cada instrumento para su rotulo, cuando hay sitio de sobra. */
     private static final int ALTO_ROTULO = 18;
     private static final int SEPARACION = 12;
     private static final int LADO_MUESTRA = 9;
@@ -69,12 +69,23 @@ public class Conjunto implements InstrumentoVisual {
     private int anchoDisponible;
     private int altoDisponible;
 
+    /**
+     * Lo que se reserva de verdad para los rotulos y los huecos. Se recorta
+     * cuando el sitio aprieta: con cuatro instrumentos apilados, los rotulos y
+     * las separaciones se llevan 120 px, y en un lienzo bajo eso era la
+     * diferencia entre caber y salirse.
+     */
+    private int altoRotulo;
+    private int separacion;
+
     public Conjunto() {
         this.porCanal = new TipoInstrumento[CANALES];
         this.atriles = new ArrayList<>();
         this.posicion = null;
         this.anchoDisponible = 900;
         this.altoDisponible = 460;
+        this.altoRotulo = ALTO_ROTULO;
+        this.separacion = SEPARACION;
     }
 
     /**
@@ -316,17 +327,26 @@ public class Conjunto implements InstrumentoVisual {
         if (this.atriles.isEmpty()) {
             return;
         }
-        int gastado = this.atriles.size() * ALTO_ROTULO
-                + (this.atriles.size() - 1) * SEPARACION;
-        int util = Math.max(this.atriles.size() * 40, alto - gastado);
+        int cuantos = this.atriles.size();
+        // Los rotulos y los huecos no pueden comerse mas de un tercio del sitio
+        this.altoRotulo = Math.min(ALTO_ROTULO, alto / Math.max(1, cuantos * 3));
+        this.separacion = Math.min(SEPARACION, this.altoRotulo);
+        int gastado = cuantos * this.altoRotulo + (cuantos - 1) * this.separacion;
+        int util = Math.max(0, alto - gastado);
 
         double pesoTotal = 0;
         for (Atril atril : this.atriles) {
             pesoTotal += peso(atril.tipo);
         }
-        for (Atril atril : this.atriles) {
-            int suyo = (int) Math.round(util * peso(atril.tipo) / pesoTotal);
-            atril.instrumento.ajustarA(ancho, suyo);
+        // Se reparte con division entera y el ultimo se lleva lo que sobra: con
+        // redondeo, cuatro paneles podian sumar un pixel mas que el hueco
+        int repartido = 0;
+        for (int i = 0; i < cuantos; i++) {
+            Atril atril = this.atriles.get(i);
+            int suyo = i == cuantos - 1 ? util - repartido
+                    : (int) (util * peso(atril.tipo) / pesoTotal);
+            repartido += suyo;
+            atril.instrumento.ajustarA(ancho, Math.max(0, suyo));
         }
     }
 
@@ -340,12 +360,12 @@ public class Conjunto implements InstrumentoVisual {
         int ancho = getAnchura();
         int cursor = y;
         for (Atril atril : this.atriles) {
-            cursor += ALTO_ROTULO;
+            cursor += this.altoRotulo;
             int suAncho = atril.instrumento.getAnchura();
             atril.instrumento.setPosicion(x + (ancho - suAncho) / 2, cursor);
             atril.yRotulo = cursor - 5;
             atril.xRotulo = x + (ancho - suAncho) / 2;
-            cursor += atril.instrumento.getAltura() + SEPARACION;
+            cursor += atril.instrumento.getAltura() + this.separacion;
         }
     }
 
@@ -369,9 +389,10 @@ public class Conjunto implements InstrumentoVisual {
     public int getAltura() {
         int alto = 0;
         for (Atril atril : this.atriles) {
-            alto += ALTO_ROTULO + atril.instrumento.getAltura() + SEPARACION;
+            alto += this.altoRotulo + atril.instrumento.getAltura()
+                    + this.separacion;
         }
-        return Math.max(0, alto - SEPARACION);
+        return Math.max(0, alto - this.separacion);
     }
 
     // ---------- dibujado ----------

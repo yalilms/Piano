@@ -52,6 +52,19 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     /** Hueco que se deja bajo el teclado para la tapa y su reflejo. */
     private static final int ALTO_TAPA_LIBRE = 46;
 
+    /**
+     * Tamano minimo de la ventana. Sale de medirlo, no de elegirlo a ojo: el
+     * marco y el panel lateral se llevan 284 px de ancho y 39 de alto, y el
+     * instrumento que mas sitio necesita es el conjunto de varios, que pide un
+     * lienzo de 700x400. De ahi 984x459, redondeado hacia arriba con margen.
+     *
+     * Sin esto se podia arrastrar la ventana hasta dejar el lienzo en nada, y
+     * entonces los instrumentos, que tienen su propio tamano minimo, se salian
+     * y aparecian cortados por los lados.
+     */
+    private static final int ANCHO_MINIMO = 1000;
+    private static final int ALTO_MINIMO = 520;
+
     private final Reproductor reproductor;
     private final SintetizadorTeclado sintetizador;
     private final Escena escena;
@@ -90,8 +103,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         int alto = Math.min(pantalla.height,
                 Preferencias.getEntero(Preferencias.ALTO,
                         (int) (pantalla.height * 0.78)));
-        ancho = Math.max(900, ancho);
-        alto = Math.max(560, alto);
+        ancho = Math.max(ANCHO_MINIMO, ancho);
+        alto = Math.max(ALTO_MINIMO, alto);
 
         this.modo = Preferencias.getEnum(ModoDeUso.class, Preferencias.MODO,
                 ModoDeUso.VER_CANCION);
@@ -194,6 +207,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
         setIconImages(Iconos.deLaAplicacion());
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setMinimumSize(new Dimension(ANCHO_MINIMO, ALTO_MINIMO));
         setSize(ancho, alto);
         setLocationRelativeTo(null);
     }
@@ -349,13 +363,13 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     /** Rehace el texto del panel para la cancion y el instrumento de ahora. */
     private void refrescarInforme() {
-        InstrumentoVisual instrumento = this.escena.getInstrumento();
-        if (this.rutaActual == null || instrumento == null) {
+        // Sin instrumento montado no hay nada que informar todavia
+        if (this.rutaActual == null || this.escena.getInstrumento() == null) {
             return;
         }
         try {
             this.etiquetaInfo.setText(informe(
-                    AnalisisMidi.de(this.rutaActual), instrumento, this.rutaActual));
+                    AnalisisMidi.de(this.rutaActual), this.rutaActual));
         } catch (Exception error) {
             // se deja el informe que hubiera
         }
@@ -439,7 +453,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
             mostrarElPiano();
             setTitle("Piano MIDI - " + new File(ruta).getName());
-            this.etiquetaInfo.setText(informe(analisis, instrumento, ruta));
+            this.etiquetaInfo.setText(informe(analisis, ruta));
         } catch (Exception error) {
             JOptionPane.showMessageDialog(this,
                     "No se ha podido abrir la cancion:\n" + error.getMessage(),
@@ -621,8 +635,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
      * en el instrumento elegido. Una guitarra no llega a las notas graves de un
      * piano, y mas vale decirlo que dejar media cancion sin pintar en silencio.
      */
-    private String informe(AnalisisMidi analisis, InstrumentoVisual instrumento,
-                           String ruta) {
+    private String informe(AnalisisMidi analisis, String ruta) {
         StringBuilder texto = new StringBuilder("<html><b>");
         texto.append(this.modo.getNombre()).append("</b><br>")
                 .append(analisis.getTotalNotas()).append(" notas, ")
@@ -644,8 +657,11 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             try {
                 double cobertura = getTipoElegido().coberturaDe(Partitura.de(ruta),
                         this.reproductor.getTransposicion());
-                // Sin articulo, que "en el Guitarra" no concuerda
-                texto.append(instrumento.getNombre()).append(": se ven el ")
+                // Se pone el nombre del tipo elegido y no el del instrumento:
+                // son el mismo, pero el desplegable dice "Teclado" y la clase se
+                // llama "Piano", y leer dos nombres para lo mismo despista.
+                // Sin articulo, que "en el Guitarra" no concuerda.
+                texto.append(getTipoElegido().getNombre()).append(": se ven el ")
                         .append(Math.round(cobertura)).append("% de las notas");
                 if (cobertura < 90) {
                     texto.append(" <b>(el resto se sale de su rango)</b>");

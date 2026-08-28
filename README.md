@@ -234,6 +234,17 @@ winget install WiXToolset.WiXToolset   # en una consola de administrador
 
 Con WiX instalado basta cambiar `$tipo` a `'msi'` en la primera parte del script.
 
+### Tamaño mínimo de la ventana
+
+**1000 × 520.** No es un número elegido a ojo: el marco y el panel lateral se
+llevan 284 px de ancho y 39 de alto (medido), y el instrumento que más sitio
+necesita es el conjunto de varios, que pide un lienzo de 700 × 400. De ahí
+984 × 459, redondeado hacia arriba con margen.
+
+Sin ese mínimo se podía arrastrar la ventana hasta dejar el lienzo en nada, y
+entonces los instrumentos —que tienen su propio tamaño mínimo— se salían y
+aparecían cortados por los lados.
+
 ### Qué recuerda entre una vez y la siguiente
 
 El modo, el instrumento con que se ve, con qué tocas, los nombres de nota, el
@@ -258,7 +269,7 @@ donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
 .\probar.ps1
 ```
 
-199 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+205 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -274,6 +285,15 @@ puede romper sin darse cuenta:
   veía una vez por teclado.
 - Que el clic acierte la tecla, **barriendo los 129 824 puntos** de la
   superficie del teclado uno a uno.
+- Que **cada instrumento quepa en el hueco que le dan**, a cualquier tamaño de
+  ventana. `ajustarA(ancho, alto)` promete eso y nadie lo cumplía: el teclado se
+  pasaba de ancho entre 8 y 16 px en *todos* los tamaños y el multipiano hasta
+  40, porque `MedidasTeclado` redondeaba el ancho de tecla en vez de truncarlo —
+  con 52 blancas, un píxel de más por tecla son 52 px de más, y al centrarse las
+  teclas de los extremos salían cortadas.
+- Que colocado como lo coloca la ventana no se salga de la escena ni se meta
+  debajo de los parches de batería, y que **pintar no lance nada** a ningún
+  tamaño, desde el mínimo de ventana hasta 2560×1400.
 - Que la conversión de pulsos a tiempo cuadre con la duración que declara Java,
   incluso en las canciones que cambian de tempo. Si se desviara, las notas
   cayendo se irían desincronizando.

@@ -3,6 +3,7 @@ package jd.piano.programa;
 import jd.piano.teclas.Estilo;
 
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -67,6 +68,10 @@ public class PanelCanales extends JPanel {
         if (usados.size() > 1) {
             add(crearBotonTodos());
         }
+        // Sin esto, con pocos canales el BoxLayout reparte el hueco que sobra
+        // entre las filas y salen estiradas: dos canales daban dos desplegables
+        // del alto de media pantalla. El muelle se queda con lo que sobra.
+        add(Box.createVerticalGlue());
         revalidate();
         repaint();
     }
@@ -136,14 +141,28 @@ public class PanelCanales extends JPanel {
         fila.add(solo, BorderLayout.EAST);
 
         if (this.conjunto == null) {
-            return fila;
+            return sinEstirar(fila);
         }
         // Dos lineas: arriba que suena, abajo donde se ve. No caben en una sola
         JPanel doble = new JPanel(new BorderLayout(0, 1));
         doble.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
         doble.add(fila, BorderLayout.NORTH);
         doble.add(crearSelectorVisual(canal), BorderLayout.SOUTH);
-        return doble;
+        return sinEstirar(doble);
+    }
+
+    /**
+     * Le pone tope de alto a la fila.
+     *
+     * BoxLayout reparte el hueco que sobra entre los componentes que admiten
+     * crecer, y un JPanel admite crecer hasta el infinito. Con dos canales eso
+     * daba dos desplegables del alto de media pantalla. Con el tope, lo que
+     * sobra se lo queda el muelle del final.
+     */
+    private static JPanel sinEstirar(JPanel fila) {
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE,
+                fila.getPreferredSize().height));
+        return fila;
     }
 
     /** Desplegable de "se ve en", para mover un canal a otro instrumento. */
@@ -198,7 +217,7 @@ public class PanelCanales extends JPanel {
         izquierda.add(new Muestra(Estilo.colorDeCanal(canal)));
         fila.add(izquierda, BorderLayout.WEST);
         fila.add(nombre, BorderLayout.CENTER);
-        return fila;
+        return sinEstirar(fila);
     }
 
     private JButton crearBotonTodos() {

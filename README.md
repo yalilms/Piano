@@ -269,7 +269,7 @@ donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
 .\probar.ps1
 ```
 
-212 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+221 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -307,8 +307,15 @@ puede romper sin darse cuenta:
   cayendo se irían desincronizando.
 - Que no se pierda ninguna nota al leer el fichero.
 - El transporte entero: pausa, saltos con sus límites, tempo acotado.
-- Que no queden notas encendidas para siempre, por ninguna de las tres vías por
-  las que pasaba.
+- Que no queden notas encendidas para siempre, por ninguna de las vías por las
+  que pasaba. Al parar el secuenciador se apagaban las **teclas dibujadas**,
+  pero la nota la sostiene el sintetizador hasta que le llega su `NOTE_OFF`, y
+  ese `NOTE_OFF` ya no llegaba nunca: al cambiar de canción en medio de un
+  acorde se quedaba una nota sonando y había que darle a Parar antes. Ahora se
+  cuentan las **notas abiertas** —un `NOTE_ON` sin su apagado— en las cinco
+  vías: cambiar de canción, parar, pausar, saltar y cambiar el tono.
+- Que una canción no le deje a la siguiente **el pedal pisado ni la afinación
+  torcida**. La siguiente sonaba desafinada sin que nada lo explicara.
 - Que buscar funcione **mientras suena**, no solo en pausa. El secuenciador de
   Java ignora el cambio de posición si está en marcha, así que pinchar en la
   barra de progreso no hacía nada, y ninguna comprobación lo cubría.

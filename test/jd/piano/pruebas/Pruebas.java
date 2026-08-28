@@ -30,6 +30,7 @@ public final class Pruebas {
         resultados.add(PruebaConjunto.ejecutar());
         resultados.add(PruebaTamanos.ejecutar());
         resultados.add(PruebaHilos.ejecutar());
+        resultados.add(PruebaSilencio.ejecutar());
 
         int aciertos = 0;
         int fallos = 0;

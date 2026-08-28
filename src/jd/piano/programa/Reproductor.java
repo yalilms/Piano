@@ -3,6 +3,7 @@ package jd.piano.programa;
 import jd.piano.teclas.Estilo;
 import jd.piano.instrumentos.InstrumentoVisual;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiChannel;
 import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiSystem;
@@ -32,6 +33,15 @@ public class Reproductor implements Receiver {
     /** Controladores que apagan todo lo que este sonando. */
     private static final int CC_TODAS_LAS_NOTAS_OFF = 123;
     private static final int CC_TODO_EL_SONIDO_OFF = 120;
+
+    /** El pedal de resonancia. */
+    private static final int CC_SOSTENIDO = 64;
+
+    /** Devuelve los controladores del canal a sus valores de partida. */
+    private static final int CC_REINICIAR_CONTROLADORES = 121;
+
+    /** La rueda de afinacion tiene 14 bits: el centro es la mitad. */
+    private static final int AFINACION_CENTRADA = 8192;
 
     private Sequencer secuenciador;
     private Transmitter transmisor;
@@ -92,6 +102,7 @@ public class Reproductor implements Receiver {
     private volatile long bucleInicioUs;
     private volatile long bucleFinUs;
 
+
     public Reproductor() {
         this.secuenciador = null;
         this.transmisor = null;
@@ -123,9 +134,9 @@ public class Reproductor implements Receiver {
         if (nuevo == this.semitonos) {
             return;
         }
-        // Lo que este sonando se apago con el tono viejo, asi que su NOTE_OFF
-        // llegaria transpuesto de otra forma y la nota se quedaria colgada
-        silenciarTodo();
+        // Lo que este sonando se encendio con el tono viejo, asi que su
+        // NOTE_OFF llegaria transpuesto de otra forma y no apagaria nada
+        apagarNotas();
         this.semitonos = nuevo;
     }
 
@@ -287,14 +298,99 @@ public class Reproductor implements Receiver {
      * falta antes de cambiar el tono: si no, las notas abiertas no encuentran
      * su apagado.
      */
-    private void silenciarTodo() {
+    /**
+     * Corta lo que este sonando: las teclas dibujadas y las voces del
+     * sintetizador.
+     *
+     * Lo segundo es lo que faltaba. Apagar las teclas solo cambia el dibujo; la
+     * nota la sigue sosteniendo el sintetizador hasta que le llega su NOTE_OFF,
+     * y si se para el secuenciador en medio de un acorde ese NOTE_OFF no llega
+     * nunca. Por eso al cambiar de cancion se quedaba una nota sonando para
+     * siempre y habia que darle a Parar antes.
+     *
+     * Se silencia mandando mensajes MIDI de verdad por la misma salida por la
+     * que va la cancion, y no llamando a los metodos de MidiChannel. Medido:
+     * con Gervill, el sintetizador que trae Java, allSoundOff y hasta noteOff
+     * sobre el MidiChannel no retiran la voz; el controlador 120 mandado por el
+     * receptor si. Y de paso funciona igual cuando la salida no es un
+     * Synthesizer que tengamos a mano, sino el dispositivo por defecto.
+     */
+    private void apagarNotas() {
         apagarTeclado();
-        if (this.sintetizador != null) {
-            for (javax.sound.midi.MidiChannel c : this.sintetizador.getChannels()) {
-                if (c != null) {
-                    c.allNotesOff();
+        for (int canal = 0; canal < CANALES; canal++) {
+            enviarControlador(canal, CC_TODO_EL_SONIDO_OFF, 0);
+            enviarControlador(canal, CC_TODAS_LAS_NOTAS_OFF, 0);
+        }
+        // Por si la salida ya esta cerrada: no retira voces en Gervill, pero es
+        // lo unico que queda cuando no hay receptor y no cuesta nada
+        Synthesizer s = this.sintetizador;
+        if (s != null) {
+            for (MidiChannel canal : s.getChannels()) {
+                if (canal != null) {
+                    canal.allSoundOff();
                 }
             }
+        }
+    }
+
+    /**
+     * Deja los dieciseis canales como recien abiertos, ademas de cortar las
+     * notas. Solo entre canciones.
+     *
+     * Sin esto una cancion le dejaba a la siguiente el pedal pisado y la rueda
+     * de afinacion donde la hubiera puesto, y la siguiente sonaba desafinada
+     * sin que nada lo explicara. No se hace al pausar ni al buscar: ahi la
+     * cancion sigue siendo la misma y su volumen, su panorama y su pedal tienen
+     * que quedarse como estaban.
+     */
+    private void reiniciarCanales() {
+        apagarNotas();
+        for (int canal = 0; canal < CANALES; canal++) {
+            enviarControlador(canal, CC_SOSTENIDO, 0);
+            enviarControlador(canal, CC_REINICIAR_CONTROLADORES, 0);
+            enviarAfinacionCentrada(canal);
+        }
+        Synthesizer s = this.sintetizador;
+        if (s != null) {
+            for (MidiChannel canal : s.getChannels()) {
+                if (canal != null) {
+                    canal.resetAllControllers();
+                    canal.controlChange(CC_SOSTENIDO, 0);
+                    canal.setPitchBend(AFINACION_CENTRADA);
+                }
+            }
+        }
+    }
+
+    /** Un cambio de controlador por la salida, si sigue abierta. */
+    private void enviarControlador(int canal, int controlador, int valor) {
+        Receiver salida = this.salidaAlSintetizador;
+        if (salida == null) {
+            return;
+        }
+        try {
+            ShortMessage mensaje = new ShortMessage();
+            mensaje.setMessage(ShortMessage.CONTROL_CHANGE, canal, controlador,
+                    valor);
+            salida.send(mensaje, -1);
+        } catch (InvalidMidiDataException | IllegalStateException error) {
+            // La salida ya estaba cerrada: no hay nada que silenciar por ahi
+        }
+    }
+
+    /** La rueda de afinacion al centro: 8192 en catorce bits. */
+    private void enviarAfinacionCentrada(int canal) {
+        Receiver salida = this.salidaAlSintetizador;
+        if (salida == null) {
+            return;
+        }
+        try {
+            ShortMessage mensaje = new ShortMessage();
+            mensaje.setMessage(ShortMessage.PITCH_BEND, canal,
+                    AFINACION_CENTRADA & 0x7F, AFINACION_CENTRADA >> 7);
+            salida.send(mensaje, -1);
+        } catch (InvalidMidiDataException | IllegalStateException error) {
+            // idem
         }
     }
 
@@ -340,7 +436,10 @@ public class Reproductor implements Receiver {
     public void pausar() {
         if (this.secuenciador != null && this.secuenciador.isRunning()) {
             this.secuenciador.stop();
-            apagarTeclado();
+            // Se cortan las voces, no solo las teclas: en pausa no puede quedar
+            // un acorde sonando. Los controladores se dejan como estan, que la
+            // cancion es la misma y al seguir tiene que sonar igual.
+            apagarNotas();
         }
     }
 
@@ -356,7 +455,8 @@ public class Reproductor implements Receiver {
         if (this.secuenciador != null) {
             this.secuenciador.stop();
             this.secuenciador.setMicrosecondPosition(0);
-            apagarTeclado();
+            // Parar es acabar con esta cancion: los canales quedan a cero
+            reiniciarCanales();
         }
     }
 
@@ -377,7 +477,7 @@ public class Reproductor implements Receiver {
             this.secuenciador.stop();
         }
         this.secuenciador.setMicrosecondPosition(destino);
-        apagarTeclado();
+        apagarNotas();
         if (sonaba) {
             this.secuenciador.start();
         }
@@ -412,16 +512,22 @@ public class Reproductor implements Receiver {
     }
 
     public void cerrar() {
+        // Primero se para y se silencia, y despues se cierra. Al reves no
+        // servia de nada: cerrando el transmisor se corta el camino por el que
+        // habria que mandar el apagado, y la nota se quedaba sonando.
+        if (this.secuenciador != null) {
+            this.secuenciador.stop();
+        }
+        reiniciarCanales();
+
         if (this.transmisor != null) {
             this.transmisor.close();
             this.transmisor = null;
         }
         if (this.secuenciador != null) {
-            this.secuenciador.stop();
             this.secuenciador.close();
             this.secuenciador = null;
         }
-        apagarTeclado();
     }
 
     private void apagarTeclado() {

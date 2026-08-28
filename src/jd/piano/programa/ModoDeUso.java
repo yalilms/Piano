@@ -9,7 +9,7 @@ package jd.piano.programa;
 public enum ModoDeUso {
 
     VER_CANCION("Ver una cancion",
-            "Un teclado con las notas cayendo"),
+            "Un instrumento con las notas cayendo"),
 
     VER_CANALES("Ver por canales",
             "Un teclado por cada canal de la cancion"),

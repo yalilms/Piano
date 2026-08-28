@@ -233,10 +233,16 @@ public class ModoAprendizaje implements CapaSuperpuesta {
         }
     }
 
+    /**
+     * La pieza que hay que pulsar. Se busca por la nota transpuesta, que es la
+     * que se ve encendida: si se pidiera la original, el modo esperaria una
+     * tecla distinta de la que senala.
+     */
     private PiezaPulsable buscar(InstrumentoVisual instrumento, int nota) {
-        PiezaPulsable pieza = instrumento.piezaDe(this.canal, nota);
+        int mostrada = this.reproductor.notaMostrada(nota);
+        PiezaPulsable pieza = instrumento.piezaDe(this.canal, mostrada);
         if (pieza == null) {
-            pieza = instrumento.piezaDe(SintetizadorTeclado.CANAL, nota);
+            pieza = instrumento.piezaDe(SintetizadorTeclado.CANAL, mostrada);
         }
         return pieza;
     }
@@ -258,7 +264,7 @@ public class ModoAprendizaje implements CapaSuperpuesta {
             if (primera == null || caja.x < primera.x) {
                 primera = caja;
             }
-            nombres.add(Estilo.etiquetaDe(nota));
+            nombres.add(Estilo.etiquetaDe(this.reproductor.notaMostrada(nota)));
 
             g.setStroke(new BasicStroke(2.5f));
             g.setColor(Estilo.conAlfa(color, hecha ? 200 : 255));

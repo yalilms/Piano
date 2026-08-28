@@ -80,11 +80,21 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     public VentanaPrincipal(List<String> canciones) {
         super("Piano MIDI");
 
+        // El tamano de la ultima vez, si cabe en esta pantalla: quien lo dejo
+        // grande en un monitor y abre en un portatil no quiere media ventana
+        // fuera de la pantalla
         Dimension pantalla = Toolkit.getDefaultToolkit().getScreenSize();
-        int ancho = (int) (pantalla.width * 0.88);
-        int alto = (int) (pantalla.height * 0.78);
+        int ancho = Math.min(pantalla.width,
+                Preferencias.getEntero(Preferencias.ANCHO,
+                        (int) (pantalla.width * 0.88)));
+        int alto = Math.min(pantalla.height,
+                Preferencias.getEntero(Preferencias.ALTO,
+                        (int) (pantalla.height * 0.78)));
+        ancho = Math.max(900, ancho);
+        alto = Math.max(560, alto);
 
-        this.modo = ModoDeUso.VER_CANCION;
+        this.modo = Preferencias.getEnum(ModoDeUso.class, Preferencias.MODO,
+                ModoDeUso.VER_CANCION);
         this.rutaActual = null;
         this.conjunto = null;
         this.cascada = null;
@@ -114,15 +124,25 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
         this.selectorInstrumento = new JComboBox<>(PanelCanales.nombresDeInstrumento());
         this.selectorInstrumento.setToolTipText("Con que instrumento tocas tu");
+        this.selectorInstrumento.setSelectedIndex(Math.max(0, Math.min(
+                this.selectorInstrumento.getItemCount() - 1,
+                Preferencias.getEntero(Preferencias.TOCAS_CON, 0))));
+        this.sintetizador.setPrograma(this.selectorInstrumento.getSelectedIndex());
         this.selectorInstrumento.addActionListener(e -> {
-            this.sintetizador.setPrograma(this.selectorInstrumento.getSelectedIndex());
+            int elegido = this.selectorInstrumento.getSelectedIndex();
+            this.sintetizador.setPrograma(elegido);
+            Preferencias.setEntero(Preferencias.TOCAS_CON, elegido);
             this.lienzo.requestFocusInWindow();
         });
 
         // Con que instrumento se ve la cancion. Cambiarlo recarga la actual.
         this.selectorVerComo = new JComboBox<>(TipoInstrumento.values());
         this.selectorVerComo.setToolTipText("Con que instrumento se ve la cancion");
+        this.selectorVerComo.setSelectedItem(Preferencias.getEnum(
+                TipoInstrumento.class, Preferencias.VER_COMO,
+                TipoInstrumento.TECLADO));
         this.selectorVerComo.addActionListener(e -> {
+            Preferencias.setEnum(Preferencias.VER_COMO, getTipoElegido());
             if (this.rutaActual != null && this.modo.eligeInstrumento()) {
                 cargar(this.rutaActual);
             } else if (!this.modo.necesitaCancion()) {
@@ -141,9 +161,13 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
         this.menu = new BarraDeMenu(this::setModo, this::mostrarNombres, this);
         this.menu.marcarModo(this.modo);
+        // El menu ya arranca con lo guardado; hay que pasarlo al estilo, que es
+        // quien de verdad decide si se pintan los nombres
+        Estilo.setMostrarNombres(this.menu.seVenLosNombres());
         setJMenuBar(this.menu);
 
-        this.panelControles = new PanelControles(this.reproductor, this::capturar);
+        this.panelControles = new PanelControles(this.reproductor, this::capturar,
+                this::cambioDeTono);
 
         JPanel vistaPiano = new JPanel(new BorderLayout());
         vistaPiano.add(crearLateral(), BorderLayout.WEST);
@@ -249,6 +273,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     private void elegirDesdeElInicio(ModoDeUso elegido) {
         this.modo = elegido;
         this.menu.marcarModo(elegido);
+        Preferencias.setEnum(Preferencias.MODO, elegido);
         if (!elegido.necesitaCancion()) {
             prepararLibre();
             this.lienzo.requestFocusInWindow();
@@ -291,6 +316,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         boolean cambia = nuevo != this.modo;
         this.modo = nuevo;
         this.menu.marcarModo(nuevo);
+        Preferencias.setEnum(Preferencias.MODO, nuevo);
 
         if (!cambia && this.escena.getInstrumento() != null) {
             mostrarElPiano();
@@ -306,6 +332,33 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     private void mostrarElPiano() {
         this.cambiador.show(this.tarjetas, "piano");
+    }
+
+    /**
+     * El tono ha cambiado. No hay que recargar nada: el reproductor transpone
+     * al vuelo y la cascada pregunta por la nota ya transpuesta. Lo unico que
+     * hay que rehacer es el informe, porque lo que cabe en el instrumento
+     * cambia: una linea de bajo subida una octava si entra en una guitarra.
+     */
+    private void cambioDeTono() {
+        if (this.rutaActual != null) {
+            refrescarInforme();
+        }
+        this.lienzo.requestFocusInWindow();
+    }
+
+    /** Rehace el texto del panel para la cancion y el instrumento de ahora. */
+    private void refrescarInforme() {
+        InstrumentoVisual instrumento = this.escena.getInstrumento();
+        if (this.rutaActual == null || instrumento == null) {
+            return;
+        }
+        try {
+            this.etiquetaInfo.setText(informe(
+                    AnalisisMidi.de(this.rutaActual), instrumento, this.rutaActual));
+        } catch (Exception error) {
+            // se deja el informe que hubiera
+        }
     }
 
     /**
@@ -580,7 +633,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                     .append(" instrumentos: ")
                     .append(this.conjunto.getNombre()).append("<br>");
             try {
-                double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta));
+                double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta),
+                        this.reproductor.getTransposicion());
                 texto.append("Se ven el ").append(Math.round(cobertura))
                         .append("% de las notas<br>");
             } catch (Exception error) {
@@ -588,7 +642,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             }
         } else if (!this.modo.esPorCanales()) {
             try {
-                double cobertura = getTipoElegido().coberturaDe(Partitura.de(ruta));
+                double cobertura = getTipoElegido().coberturaDe(Partitura.de(ruta),
+                        this.reproductor.getTransposicion());
                 // Sin articulo, que "en el Guitarra" no concuerda
                 texto.append(instrumento.getNombre()).append(": se ven el ")
                         .append(Math.round(cobertura)).append("% de las notas");
@@ -600,6 +655,7 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                 // sin cobertura que informar
             }
         }
+        texto.append(textoDelTono());
         texto.append("<i>").append(this.modo.getExplicacion()).append("</i></html>");
         return texto.toString();
     }
@@ -615,14 +671,26 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
                 .append(" instrumentos: ")
                 .append(this.conjunto.getNombre()).append("<br>");
         try {
-            double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta));
+            double cobertura = this.conjunto.coberturaDe(Partitura.de(ruta),
+                    this.reproductor.getTransposicion());
             texto.append("Se ven el ").append(Math.round(cobertura))
                     .append("% de las notas<br>");
         } catch (Exception error) {
             // sin cobertura que informar
         }
+        texto.append(textoDelTono());
         texto.append("<i>").append(this.modo.getExplicacion()).append("</i></html>");
         return texto.toString();
+    }
+
+    /** Aviso de que la cancion no esta en su tono original. */
+    private String textoDelTono() {
+        int semitonos = this.reproductor.getTransposicion();
+        if (semitonos == 0) {
+            return "";
+        }
+        return "Tono: " + (semitonos > 0 ? "+" : "") + semitonos
+                + (Math.abs(semitonos) == 1 ? " semitono" : " semitonos") + "<br>";
     }
 
     private void mostrarNombres(boolean ver) {
@@ -722,10 +790,25 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
+                VentanaPrincipal.this.guardarElTamano();
+                Preferencias.guardar();
                 VentanaPrincipal.this.reproductor.cerrar();
                 VentanaPrincipal.this.sintetizador.cerrar();
             }
         });
+    }
+
+    /**
+     * Guarda el tamano de la ventana. Maximizada se guarda el tamano que tenia
+     * antes, que es el que hay que restaurar al desmaximizar.
+     */
+    private void guardarElTamano() {
+        boolean maximizada = (getExtendedState() & MAXIMIZED_BOTH) != 0;
+        Preferencias.setBooleano(Preferencias.MAXIMIZADA, maximizada);
+        if (!maximizada) {
+            Preferencias.setEntero(Preferencias.ANCHO, getWidth());
+            Preferencias.setEntero(Preferencias.ALTO, getHeight());
+        }
     }
 
     private static Image cargarFondo() {
@@ -746,6 +829,9 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
      * elige que hacer.
      */
     public void arrancar() {
+        if (Preferencias.getBooleano(Preferencias.MAXIMIZADA, false)) {
+            setExtendedState(getExtendedState() | MAXIMIZED_BOTH);
+        }
         setVisible(true);
         this.cambiador.show(this.tarjetas, "inicio");
     }

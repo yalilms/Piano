@@ -202,11 +202,16 @@ public class Conjunto implements InstrumentoVisual {
      * pregunta nota a nota si hay sitio donde pintarla.
      */
     public double coberturaDe(Partitura partitura) {
+        return coberturaDe(partitura, 0);
+    }
+
+    /** Lo mismo contando la transposicion. */
+    public double coberturaDe(Partitura partitura, int semitonos) {
         long total = 0;
         long caben = 0;
         for (NotaMidi nota : partitura.getNotas()) {
             total++;
-            if (piezaDe(nota.canal(), nota.nota()) != null) {
+            if (piezaDe(nota.canal(), nota.nota() + semitonos) != null) {
                 caben++;
             }
         }

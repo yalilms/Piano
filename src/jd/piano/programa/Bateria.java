@@ -111,6 +111,21 @@ public class Bateria implements CapaSuperpuesta {
         }
     }
 
+    /**
+     * Si esa pieza se acaba de golpear y todavia se le ve el fundido. Lo usa la
+     * comprobacion de que la percusion no se transpone: en el canal 10 la nota
+     * es una pieza, no una altura, y subirla convertiria el bombo en un platillo.
+     */
+    public boolean estaGolpeado(int nota) {
+        for (Pad pad : this.pads) {
+            if (pad.nota == nota) {
+                return pad.instanteGolpe > 0
+                        && System.currentTimeMillis() - pad.instanteGolpe < FUNDIDO_MS;
+            }
+        }
+        return false;
+    }
+
     public void apagarTodo() {
         for (Pad pad : this.pads) {
             pad.instanteGolpe = 0;

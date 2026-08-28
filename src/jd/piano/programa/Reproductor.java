@@ -61,6 +61,22 @@ public class Reproductor implements Receiver {
 
     private Bateria bateria;
 
+    /** Tope de la transposicion, en semitonos: dos octavas a cada lado. */
+    public static final int TONO_MAXIMO = 12;
+
+    /** Un bucle mas corto que esto no sirve para practicar y solo da tirones. */
+    private static final long BUCLE_MINIMO_US = 500_000;
+
+    /*
+     * Los lee el hilo del secuenciador en cada mensaje y los escribe el de
+     * Swing cuando se toca el control, asi que van volatiles.
+     */
+    private volatile int semitonos;
+
+    /** -1 en inicio: sin bucle. -1 solo en fin: la A puesta, falta la B. */
+    private volatile long bucleInicioUs;
+    private volatile long bucleFinUs;
+
     public Reproductor() {
         this.secuenciador = null;
         this.transmisor = null;
@@ -70,7 +86,99 @@ public class Reproductor implements Receiver {
         this.notasTocadas = 0;
         this.salidaAlSintetizador = null;
         this.bateria = null;
+        this.semitonos = 0;
+        this.bucleInicioUs = -1;
+        this.bucleFinUs = -1;
         java.util.Arrays.fill(this.programaForzado, -1);
+    }
+
+    /**
+     * Cuantos semitonos se sube o baja la cancion. Sirve para pasarla a un tono
+     * mas facil de tocar, o para meterla en el rango de un instrumento que no
+     * le llega: una linea de bajo subida una octava cabe en una guitarra.
+     *
+     * La percusion no se transpone: en el canal 10 la nota es una pieza, no una
+     * altura, y subirla convertiria el bombo en un platillo.
+     */
+    public void setTransposicion(int semitonos) {
+        int nuevo = Math.max(-TONO_MAXIMO, Math.min(TONO_MAXIMO, semitonos));
+        if (nuevo == this.semitonos) {
+            return;
+        }
+        // Lo que este sonando se apago con el tono viejo, asi que su NOTE_OFF
+        // llegaria transpuesto de otra forma y la nota se quedaria colgada
+        silenciarTodo();
+        this.semitonos = nuevo;
+    }
+
+    public int getTransposicion() {
+        return this.semitonos;
+    }
+
+    /** La nota tal y como se ve y se oye, ya transpuesta. */
+    public int notaMostrada(int nota) {
+        return nota + this.semitonos;
+    }
+
+    // ---------- bucle para practicar un trozo ----------
+
+    /**
+     * Marca el bucle en tres pasos con el mismo boton: la primera vez pone la
+     * A donde va la cancion, la segunda la B, y la tercera lo quita.
+     *
+     * Si la B cae antes que la A o demasiado cerca, se entiende que uno se ha
+     * pasado y se recoloca la A ahi, en vez de dejar un bucle inservible.
+     */
+    public void marcarBucle() {
+        long ahora = getPosicionUs();
+        if (this.bucleInicioUs < 0) {
+            this.bucleInicioUs = ahora;
+            this.bucleFinUs = -1;
+        } else if (this.bucleFinUs < 0) {
+            if (ahora > this.bucleInicioUs + BUCLE_MINIMO_US) {
+                this.bucleFinUs = ahora;
+            } else {
+                this.bucleInicioUs = ahora;
+            }
+        } else {
+            quitarBucle();
+        }
+    }
+
+    public void quitarBucle() {
+        this.bucleInicioUs = -1;
+        this.bucleFinUs = -1;
+    }
+
+    /** Si hay un bucle completo, con sus dos extremos puestos. */
+    public boolean tieneBucle() {
+        return this.bucleInicioUs >= 0 && this.bucleFinUs > this.bucleInicioUs;
+    }
+
+    /** Si esta puesta la A y falta la B. */
+    public boolean esperaFinDeBucle() {
+        return this.bucleInicioUs >= 0 && this.bucleFinUs < 0;
+    }
+
+    public long getBucleInicioUs() {
+        return this.bucleInicioUs;
+    }
+
+    public long getBucleFinUs() {
+        return this.bucleFinUs;
+    }
+
+    /**
+     * Vuelve al principio del bucle si la cancion ya ha pasado del final.
+     *
+     * Lo llama el temporizador de los controles y no el propio send: buscar
+     * para y arranca el secuenciador, y hacerlo desde dentro del hilo que esta
+     * entregando los mensajes es pedir un bloqueo.
+     */
+    public void atenderBucle() {
+        if (tieneBucle() && estaSonando() && getPosicionUs() >= this.bucleFinUs) {
+            buscar(this.bucleInicioUs);
+        }
     }
 
     public void setSintetizador(Synthesizer sintetizador) {
@@ -153,7 +261,25 @@ public class Reproductor implements Receiver {
     }
 
     /** Deja una cancion lista para sonar, sin arrancarla. */
+    /**
+     * Corta todo lo que este sonando, en el teclado y en el sintetizador. Hace
+     * falta antes de cambiar el tono: si no, las notas abiertas no encuentran
+     * su apagado.
+     */
+    private void silenciarTodo() {
+        apagarTeclado();
+        if (this.sintetizador != null) {
+            for (javax.sound.midi.MidiChannel c : this.sintetizador.getChannels()) {
+                if (c != null) {
+                    c.allNotesOff();
+                }
+            }
+        }
+    }
+
     public void cargar(String ruta) throws Exception {
+        // El bucle de la cancion anterior no significa nada en esta
+        quitarBucle();
         cerrar();
         Sequence secuencia = MidiSystem.getSequence(new File(ruta));
         // Sin conectar al dispositivo por defecto: los mensajes pasan por este
@@ -317,8 +443,37 @@ public class Reproductor implements Receiver {
             return;
         }
 
-        reenviar(mensaje, marcaDeTiempo);
-        actualizarTeclado(sm, canal, comando);
+        ShortMessage transpuesto = transponer(sm, comando);
+        if (transpuesto == null) {
+            // La transposicion la saca del rango MIDI: se descarta entera, el
+            // encendido y el apagado, para no dejar notas colgadas
+            return;
+        }
+        reenviar(transpuesto, marcaDeTiempo);
+        actualizarTeclado(transpuesto, canal, comando);
+    }
+
+    /**
+     * La misma nota subida o bajada. Devuelve el mensaje original cuando no hay
+     * nada que transponer, y null si la nota se sale de las 128 del MIDI.
+     */
+    private ShortMessage transponer(ShortMessage sm, int comando) {
+        boolean esNota = comando == ShortMessage.NOTE_ON
+                || comando == ShortMessage.NOTE_OFF;
+        if (this.semitonos == 0 || !esNota) {
+            return sm;
+        }
+        int nota = sm.getData1() + this.semitonos;
+        if (nota < 0 || nota > 127) {
+            return null;
+        }
+        try {
+            ShortMessage nuevo = new ShortMessage();
+            nuevo.setMessage(comando, sm.getChannel(), nota, sm.getData2());
+            return nuevo;
+        } catch (javax.sound.midi.InvalidMidiDataException error) {
+            return null;
+        }
     }
 
     /**

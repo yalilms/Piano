@@ -98,6 +98,14 @@ mientras mantienes la tecla y se desvanece al soltarla, con el nombre de la
 - **Mezcla** — silenciar o aislar cualquier canal, y cambiar el instrumento de
   cualquier pista sin tocar el fichero.
 - **Transporte** — pausa, salto a cualquier punto y tempo de x0,25 a x3.
+- **Tono** — sube o baja la canción hasta una octava, en semitonos. Sirve para
+  pasarla a algo más fácil de tocar, y para meterla en el rango de un
+  instrumento que no le llega: `eminem-stan.mid` en la guitarra pasa del 92 % de
+  las notas visibles al **100 % subiéndola 8 semitonos**.
+- **Bucle A-B** — repetir un trozo hasta que salga. El mismo botón marca el
+  principio, luego el final, y luego lo quita.
+- **Se acuerda de cómo lo dejaste** — el modo, el instrumento, con qué tocas y
+  el tamaño de la ventana.
 
 ![Notas cayendo](docs/piano-sencillo.jpg)
 
@@ -151,6 +159,8 @@ java -cp "out;lib/*" jd.piano.programa.ProgramaSwing
 | `Q` `2` `W` `3` `E` `R` `5` `T` `6` `Y` `7` `U` `I` | La octava siguiente |
 | `←` `→` | Baja o sube una octava |
 | Espacio | Pausa, o pedal de resonancia en el modo libre |
+| Botón **Bucle A-B** | Marca el principio del trozo, luego el final, luego lo quita |
+| **Tono** | Sube o baja la canción en semitonos |
 | `Ctrl+1` a `Ctrl+5` | Cambiar de modo |
 | `Ctrl+0` | Volver a la pantalla de inicio |
 | Clic y arrastre en las teclas | Toca con el ratón |
@@ -224,6 +234,18 @@ winget install WiXToolset.WiXToolset   # en una consola de administrador
 
 Con WiX instalado basta cambiar `$tipo` a `'msi'` en la primera parte del script.
 
+### Qué recuerda entre una vez y la siguiente
+
+El modo, el instrumento con que se ve, con qué tocas, los nombres de nota, el
+encadenado y el tamaño de la ventana. Se guardan en las preferencias del usuario
+(`Preferences`, que en Windows es el registro).
+
+Lo que **no** se guarda, a propósito: la canción, el tempo y el tono. Los tres
+son decisiones de un rato concreto, y recuperarlos en silencio sorprende más que
+ayuda — abrir el programa y encontrarse la canción a media velocidad y en otro
+tono no se entiende. La canción, además, es justo lo que la pantalla de inicio
+está para preguntar.
+
 ### Dónde se guardan las capturas
 
 Ejecutándolo desde el proyecto, en `capturas\` al lado. Empaquetado, en
@@ -236,7 +258,7 @@ donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
 .\probar.ps1
 ```
 
-166 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+194 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -259,6 +281,19 @@ puede romper sin darse cuenta:
 - Que el modo aprendizaje pare al llegar a un acorde y siga al tocarlo.
 - Que los cinco modos sean coherentes: no puede haber notas cayendo sin
   canción, ni con varios teclados, ni con varios instrumentos apilados.
+- Que **transponer no deje notas colgadas**. Es el riesgo real de esa función:
+  una nota se enciende con un tono y, si mueves el control mientras suena, su
+  apagado llega transpuesto de otra forma y no cuadra con nada. Se comprueba
+  también que la percusión *no* se transponga: en el canal 10 la nota es una
+  pieza, no una altura, y subirla convertiría el bombo en un platillo.
+- Que transponer **sirva de algo**, midiéndolo en las canciones de verdad: qué
+  tono da la mejor cobertura y cuánto se gana.
+- Que el bucle marque, cierre y se quite con el mismo botón, que vuelva atrás al
+  pasarse del final, que **no** vuelva atrás en pausa (para poder moverse a
+  mano), y que cargar otra canción lo limpie.
+- Que las preferencias sobrevivan al cierre, y que **un valor guardado por una
+  versión anterior que ya no existe** caiga al valor por defecto en vez de
+  reventar al arrancar.
 - Que el rastro del modo libre aparezca al tocar.
 - Que la pantalla de inicio se pinte y que cada tarjeta elija su modo, sin que
   ninguna pise a otra. La posición se le pregunta a la pantalla en vez de

@@ -3,9 +3,12 @@ package jd.piano.pruebas;
 import jd.piano.programa.Iconos;
 import jd.piano.programa.InstrumentosGM;
 import jd.piano.programa.ListaCanciones;
+import jd.piano.programa.ModoDeUso;
 import jd.piano.programa.PianoSencillo;
+import jd.piano.programa.Preferencias;
 import jd.piano.programa.Recursos;
 import jd.piano.programa.SintetizadorTeclado;
+import jd.piano.programa.TipoInstrumento;
 import jd.piano.teclas.Estilo;
 import jd.piano.teclas.Piano;
 
@@ -14,7 +17,10 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
 
-/** Nombres de nota, instrumentos, icono, recursos y teclado del ordenador. */
+/**
+ * Nombres de nota, instrumentos, icono, recursos, teclado del ordenador y las
+ * preferencias que se recuerdan de una vez para la siguiente.
+ */
 public final class PruebaInterfaz {
 
     private PruebaInterfaz() {
@@ -27,7 +33,69 @@ public final class PruebaInterfaz {
         icono(c);
         recursos(c);
         tecladoDelOrdenador(c);
+        preferencias(c);
         return c;
+    }
+
+    /**
+     * Lo que el programa recuerda entre una vez y la siguiente.
+     *
+     * Se usan claves propias de la prueba y se borran al acabar: escribir en las
+     * de verdad cambiaria los ajustes de quien este usando el programa.
+     *
+     * Lo importante que se comprueba aqui es que un valor guardado que ya no
+     * existe no rompa nada. Los enum se guardan por nombre, asi que si en una
+     * version futura desaparece un modo, lo guardado deja de valer y hay que
+     * caer al valor por defecto en vez de reventar al arrancar.
+     */
+    private static void preferencias(Comprobador c) {
+        String enteroPrueba = "prueba.entero";
+        String boolPrueba = "prueba.booleano";
+        String enumPrueba = "prueba.enum";
+        try {
+            c.comprobar("una clave que no existe da el valor por defecto",
+                    Preferencias.getEntero(enteroPrueba, 77) == 77
+                            && Preferencias.getBooleano(boolPrueba, true));
+
+            Preferencias.setEntero(enteroPrueba, 1234);
+            Preferencias.setBooleano(boolPrueba, false);
+            c.comprobar("un entero y un booleano se guardan y se recuperan",
+                    Preferencias.getEntero(enteroPrueba, 0) == 1234
+                            && !Preferencias.getBooleano(boolPrueba, true));
+
+            Preferencias.setEnum(enumPrueba, ModoDeUso.APRENDER);
+            c.comprobar("un modo se guarda y se recupera",
+                    Preferencias.getEnum(ModoDeUso.class, enumPrueba,
+                            ModoDeUso.VER_CANCION) == ModoDeUso.APRENDER);
+
+            // Lo guardado no vale para este tipo: es el caso de una version
+            // anterior que guardo algo que ya no existe
+            c.comprobar("un valor guardado que ya no existe cae al por defecto",
+                    Preferencias.getEnum(TipoInstrumento.class, enumPrueba,
+                            TipoInstrumento.GUITARRA) == TipoInstrumento.GUITARRA);
+
+            Preferencias.setEnum(enumPrueba, null);
+            c.comprobar("guardar null no borra lo que habia",
+                    Preferencias.getEnum(ModoDeUso.class, enumPrueba,
+                            ModoDeUso.VER_CANCION) == ModoDeUso.APRENDER);
+
+            Preferencias.olvidar(enteroPrueba);
+            c.comprobar("olvidar una clave la deja como si no estuviera",
+                    Preferencias.getEntero(enteroPrueba, 55) == 55);
+
+            // Y que las claves de verdad esten declaradas, no escritas a mano
+            // en cada sitio donde se usan
+            c.comprobar("las claves que usa el programa estan declaradas",
+                    !Preferencias.MODO.isBlank() && !Preferencias.VER_COMO.isBlank()
+                            && !Preferencias.TOCAS_CON.isBlank()
+                            && !Preferencias.ANCHO.isBlank()
+                            && !Preferencias.ALTO.isBlank());
+        } finally {
+            Preferencias.olvidar(enteroPrueba);
+            Preferencias.olvidar(boolPrueba);
+            Preferencias.olvidar(enumPrueba);
+            Preferencias.guardar();
+        }
     }
 
     private static void nombresDeNota(Comprobador c) {

@@ -85,7 +85,10 @@ public class Cascada implements CapaSuperpuesta {
                              NotaMidi nota,
                              long posicion) {
         // El instrumento dice donde cae la nota: una tecla, un traste...
-        Rectangle caja = instrumento.donde(nota.canal(), nota.nota());
+        // Se pregunta por la nota transpuesta: es la que va a sonar y la que se
+        // va a encender, asi que es donde tiene que aterrizar la barra
+        Rectangle caja = instrumento.donde(nota.canal(),
+                this.reproductor.notaMostrada(nota.nota()));
         if (caja == null) {
             return;
         }

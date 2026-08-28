@@ -66,14 +66,21 @@ public class BarraDeMenu extends JMenuBar {
 
         JMenu menuVer = new JMenu("Ver");
         menuVer.setMnemonic(KeyEvent.VK_V);
-        this.verNombres = new JCheckBoxMenuItem("Nombres de nota", true);
+        this.verNombres = new JCheckBoxMenuItem("Nombres de nota",
+                Preferencias.getBooleano(Preferencias.NOMBRES_DE_NOTA, true));
         this.verNombres.setToolTipText("Ensena la nota en cada tecla blanca");
-        this.verNombres.addActionListener(e ->
-                alVerNombres.accept(this.verNombres.isSelected()));
+        this.verNombres.addActionListener(e -> {
+            Preferencias.setBooleano(Preferencias.NOMBRES_DE_NOTA,
+                    this.verNombres.isSelected());
+            alVerNombres.accept(this.verNombres.isSelected());
+        });
         menuVer.add(this.verNombres);
 
-        this.encadenar = new JCheckBoxMenuItem("Encadenar canciones", true);
+        this.encadenar = new JCheckBoxMenuItem("Encadenar canciones",
+                Preferencias.getBooleano(Preferencias.ENCADENAR, true));
         this.encadenar.setToolTipText("Al acabar, pasa a la siguiente de la lista");
+        this.encadenar.addActionListener(e -> Preferencias.setBooleano(
+                Preferencias.ENCADENAR, this.encadenar.isSelected()));
         menuVer.add(this.encadenar);
         menuVer.addSeparator();
         menuVer.add(item("Guardar captura", KeyEvent.VK_G, acciones::capturar));
@@ -137,6 +144,8 @@ public class BarraDeMenu extends JMenuBar {
                 + "<tr><td>Clic y arrastre en las teclas</td>"
                 + "<td>tocar con el raton</td></tr>"
                 + "<tr><td>" + atajosDeModo() + "</td><td>cambiar de modo</td></tr>"
+                + "<tr><td>Bucle A-B</td><td>una vez el principio del trozo, otra el final, otra para quitarlo</td></tr>"
+                + "<tr><td>Tono</td><td>sube o baja la cancion en semitonos, para tocarla mas facil</td></tr>"
                 + "</table>"
                 + "<p>El Do central sale marcado en rojo: es el <b>"
                 + Estilo.etiquetaDe(Estilo.DO_CENTRAL) + "</b>.</p>"

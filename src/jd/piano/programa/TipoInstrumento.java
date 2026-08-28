@@ -84,11 +84,20 @@ public enum TipoInstrumento {
      * Sirve para avisar antes de que alguien vea media cancion en blanco.
      */
     public double coberturaDe(Partitura partitura) {
+        return coberturaDe(partitura, 0);
+    }
+
+    /**
+     * Lo mismo contando la transposicion. Cambia mucho: una cancion que en un
+     * mastil de guitarra se ve a medias puede caber entera subida una octava.
+     */
+    public double coberturaDe(Partitura partitura, int semitonos) {
         long total = 0;
         long caben = 0;
         for (NotaMidi nota : partitura.getNotas()) {
             total++;
-            if (nota.nota() >= getNotaMinima() && nota.nota() <= getNotaMaxima()) {
+            int altura = nota.nota() + semitonos;
+            if (altura >= getNotaMinima() && altura <= getNotaMaxima()) {
                 caben++;
             }
         }

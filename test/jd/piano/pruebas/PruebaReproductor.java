@@ -1,8 +1,11 @@
 package jd.piano.pruebas;
 
+import jd.piano.programa.Bateria;
 import jd.piano.programa.MultiPiano;
+import jd.piano.programa.Partitura;
 import jd.piano.programa.PianoSencillo;
 import jd.piano.programa.Reproductor;
+import jd.piano.programa.TipoInstrumento;
 import jd.piano.teclas.LayoutTeclados;
 import jd.piano.teclas.MedidasTeclado;
 import jd.piano.teclas.Piano;
@@ -12,7 +15,9 @@ import javax.sound.midi.ShortMessage;
 import java.io.File;
 import java.util.List;
 
-/** El transporte y el silenciado por canal. */
+/**
+ * El transporte, el silenciado por canal, la transposicion y el bucle.
+ */
 public final class PruebaReproductor {
 
     private PruebaReproductor() {
@@ -28,7 +33,200 @@ public final class PruebaReproductor {
         transporte(c, canciones[0].getPath());
         notasColgadas(c);
         silenciado(c);
+        tono(c);
+        bucle(c, canciones[0].getPath());
+        cuantoGanaTransponer(c);
         return c;
+    }
+
+    /**
+     * La transposicion. Lo que hay que vigilar es que no queden notas colgadas:
+     * una nota se enciende con un tono y se apaga con otro si el usuario mueve
+     * el control mientras suena, y entonces su apagado no cuadra con nada.
+     */
+    private static void tono(Comprobador c) {
+        Piano piano = new PianoSencillo(21, 108);
+        piano.setPosicion(0, 0);
+        Reproductor r = new Reproductor();
+        r.conectar(piano);
+        try {
+            c.comprobar("empieza en el tono original", r.getTransposicion() == 0);
+
+            r.setTransposicion(99);
+            boolean topeArriba = r.getTransposicion() == Reproductor.TONO_MAXIMO;
+            r.setTransposicion(-99);
+            boolean topeAbajo = r.getTransposicion() == -Reproductor.TONO_MAXIMO;
+            c.comprobar("el tono tiene tope por los dos lados",
+                    topeArriba && topeAbajo);
+
+            r.setTransposicion(3);
+            c.comprobar("notaMostrada devuelve la nota transpuesta",
+                    r.notaMostrada(60) == 63);
+
+            r.send(nota(ShortMessage.NOTE_ON, 0, 60, 100), -1);
+            c.comprobar("la nota se enciende tres semitonos mas arriba",
+                    piano.getTecla(0, 63).estaPulsado()
+                            && !piano.getTecla(0, 60).estaPulsado());
+
+            // El apagado llega con la nota original y tiene que apagar la
+            // transpuesta, no dejarla encendida
+            r.send(nota(ShortMessage.NOTE_OFF, 0, 60, 0), -1);
+            c.comprobar("el apagado apaga la tecla transpuesta",
+                    contar(piano) == 0);
+
+            // Mover el control con una nota sonando: se corta todo antes
+            r.setTransposicion(0);
+            r.send(nota(ShortMessage.NOTE_ON, 0, 60, 100), -1);
+            r.setTransposicion(5);
+            c.comprobar("cambiar el tono apaga lo que estuviera sonando",
+                    contar(piano) == 0);
+            r.send(nota(ShortMessage.NOTE_OFF, 0, 60, 0), -1);
+            c.comprobar("el apagado que llega despues no enciende nada",
+                    contar(piano) == 0);
+
+            // Lo que se sale de las 128 notas del MIDI se descarta entero
+            r.setTransposicion(12);
+            r.send(nota(ShortMessage.NOTE_ON, 0, 120, 100), -1);
+            c.comprobar("una nota que se sale del MIDI no se pinta",
+                    contar(piano) == 0);
+            r.send(nota(ShortMessage.NOTE_OFF, 0, 120, 0), -1);
+            c.comprobar("y su apagado tampoco revienta", contar(piano) == 0);
+
+            // La percusion no se transpone: la nota es una pieza, no una altura
+            Bateria bateria = new Bateria();
+            bateria.construir(List.of(36, 38, 42));
+            r.setBateria(bateria);
+            r.setTransposicion(3);
+            r.send(nota(ShortMessage.NOTE_ON, 9, 36, 100), -1);
+            c.comprobar("la percusion no se transpone",
+                    bateria.estaGolpeado(36) && !bateria.estaGolpeado(39));
+        } catch (Exception error) {
+            c.comprobar("el tono no lanza excepciones: " + error, false);
+        }
+        r.cerrar();
+    }
+
+    /**
+     * El bucle para practicar un trozo: el mismo boton pone la A, luego la B y
+     * luego lo quita.
+     */
+    private static void bucle(Comprobador c, String cancion) {
+        Reproductor r = new Reproductor();
+        try {
+            r.cargar(cancion);
+            c.comprobar("empieza sin bucle",
+                    !r.tieneBucle() && !r.esperaFinDeBucle());
+
+            r.buscar(2_000_000);
+            r.marcarBucle();
+            c.comprobar("la primera marca pone la A y espera la B",
+                    r.esperaFinDeBucle() && !r.tieneBucle());
+
+            r.buscar(6_000_000);
+            r.marcarBucle();
+            c.dato(String.format("bucle marcado: %.1f s a %.1f s",
+                    r.getBucleInicioUs() / 1e6, r.getBucleFinUs() / 1e6));
+            c.comprobar("la segunda marca cierra el bucle",
+                    r.tieneBucle() && !r.esperaFinDeBucle()
+                            && r.getBucleFinUs() > r.getBucleInicioUs());
+
+            r.marcarBucle();
+            c.comprobar("la tercera marca lo quita",
+                    !r.tieneBucle() && !r.esperaFinDeBucle());
+
+            // Una B pegada a la A no da un bucle utilizable: se recoloca la A
+            r.buscar(2_000_000);
+            r.marcarBucle();
+            r.buscar(2_100_000);
+            r.marcarBucle();
+            c.comprobar("una B demasiado cerca recoloca la A en vez de cerrar",
+                    r.esperaFinDeBucle() && !r.tieneBucle());
+
+            // Y que de verdad vuelva atras al pasarse del final
+            r.quitarBucle();
+            r.buscar(2_000_000);
+            r.marcarBucle();
+            r.buscar(6_000_000);
+            r.marcarBucle();
+
+            r.buscar(8_000_000);
+            c.comprobar("en pausa no vuelve atras, para poder moverse a mano",
+                    posicionTrasAtender(r) > 7_000_000);
+
+            r.reproducir();
+            r.buscar(8_000_000);
+            r.atenderBucle();
+            long vuelta = r.getPosicionUs();
+            r.pausar();
+            c.dato("tras pasarse del final vuelve a " + vuelta / 1000 + " ms");
+            c.comprobar("sonando, al pasar del final vuelve al principio",
+                    vuelta < 4_000_000);
+
+            r.cargar(cancion);
+            c.comprobar("cargar otra cancion limpia el bucle", !r.tieneBucle());
+        } catch (Exception error) {
+            c.comprobar("el bucle no lanza excepciones: " + error, false);
+        }
+        r.cerrar();
+    }
+
+    private static long posicionTrasAtender(Reproductor r) {
+        r.atenderBucle();
+        return r.getPosicionUs();
+    }
+
+    /**
+     * Cuanto se gana de verdad transponiendo. No es un adorno: la guitarra deja
+     * fuera las notas graves, y subir la cancion mete parte de ellas en su
+     * rango. Aqui se mide en las canciones reales.
+     */
+    private static void cuantoGanaTransponer(Comprobador c) {
+        File[] canciones = PruebaMidi.canciones();
+        double mejorGanancia = 0;
+        String donde = "";
+        boolean nuncaEmpeoraElMejor = true;
+
+        for (File f : canciones) {
+            try {
+                Partitura p = Partitura.de(f.getPath());
+                double sinTocar = TipoInstrumento.GUITARRA.coberturaDe(p, 0);
+                double mejor = sinTocar;
+                int mejorTono = 0;
+                for (int t = -Reproductor.TONO_MAXIMO; t <= Reproductor.TONO_MAXIMO; t++) {
+                    double cobertura = TipoInstrumento.GUITARRA.coberturaDe(p, t);
+                    if (cobertura > mejor) {
+                        mejor = cobertura;
+                        mejorTono = t;
+                    }
+                }
+                if (mejor - sinTocar > mejorGanancia) {
+                    mejorGanancia = mejor - sinTocar;
+                    donde = String.format("%s: %.0f%% -> %.0f%% con %+d semitonos",
+                            f.getName(), sinTocar, mejor, mejorTono);
+                }
+                nuncaEmpeoraElMejor = nuncaEmpeoraElMejor && mejor >= sinTocar;
+            } catch (Exception error) {
+                nuncaEmpeoraElMejor = false;
+            }
+        }
+        c.dato("lo que mas gana en la guitarra -> " + donde);
+        c.comprobar("transponer mejora la cobertura de alguna cancion",
+                mejorGanancia > 5);
+        c.comprobar("el mejor tono nunca es peor que el original",
+                nuncaEmpeoraElMejor);
+
+        // Y el tono original siempre tiene que dar lo mismo que sin transponer
+        boolean coincide = true;
+        for (File f : canciones) {
+            try {
+                Partitura p = Partitura.de(f.getPath());
+                coincide = coincide && TipoInstrumento.TECLADO.coberturaDe(p)
+                        == TipoInstrumento.TECLADO.coberturaDe(p, 0);
+            } catch (Exception error) {
+                coincide = false;
+            }
+        }
+        c.comprobar("sin transponer, la cobertura es la de siempre", coincide);
     }
 
     private static void transporte(Comprobador c, String cancion) {

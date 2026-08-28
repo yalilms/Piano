@@ -258,14 +258,21 @@ donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
 .\probar.ps1
 ```
 
-194 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+199 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
   huecos. Es el invariante que ya se rompió una vez: `TeclaBlanca2` y `3`
   enumeraban vértices a mano y una coordenada mal metía una cuña blanca encima
   de la tecla negra vecina.
-- Que el clic acierte la tecla, **barriendo los 129 074 puntos** de la
+- Que la **fila de arriba del teclado esté cubierta de punta a punta**, a
+  cualquier escala. Es el segundo fallo de geometría que se colaba de verdad: la
+  forma de una blanca se hace restando el hueco de sus negras vecinas, y eso se
+  decidía sólo por la nota. En el último Do de un piano no hay Do#, así que se
+  restaba un hueco que ninguna negra iba a llenar y quedaba un mordisco en la
+  esquina — 15 píxeles sin tecla en cada extremo, y en el modo por canales se
+  veía una vez por teclado.
+- Que el clic acierte la tecla, **barriendo los 129 824 puntos** de la
   superficie del teclado uno a uno.
 - Que la conversión de pulsos a tiempo cuadre con la duración que declara Java,
   incluso en las canciones que cambian de tempo. Si se desviara, las notas

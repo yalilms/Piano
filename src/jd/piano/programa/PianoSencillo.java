@@ -31,7 +31,8 @@ public class PianoSencillo extends Piano {
         setTeclaFinal(teclaFinal);
         this.teclas = new HashMap<>();
         for (int i = teclaInicial; i <= teclaFinal; i++) {
-            this.teclas.put(i, TeclaFactory.crearTecla(i, medidas));
+            this.teclas.put(i, TeclaFactory.crearTecla(i, medidas,
+                    teclaInicial, teclaFinal));
         }
     }
 

@@ -19,8 +19,31 @@ public abstract class TeclaBlanca extends Tecla {
     /** Por debajo de este ancho de tecla la etiqueta no cabe. */
     private static final int ANCHURA_MINIMA_ETIQUETA = 14;
 
+    /**
+     * Si de verdad hay una tecla negra pegada a cada lado.
+     *
+     * La forma de la tecla depende de su nota: un Do tiene negra a la derecha y
+     * un Si a la izquierda. Pero en los extremos del teclado esa negra puede no
+     * existir: un piano de 88 teclas acaba en el Do8 y no hay Do#8. Empiezan en
+     * true porque una tecla suelta, sin teclado alrededor, se dibuja como si
+     * tuviera vecinas.
+     */
+    private boolean hayNegraIzquierda = true;
+    private boolean hayNegraDerecha = true;
+
     TeclaBlanca(int n, MedidasTeclado medidas) {
         super(n, medidas);
+    }
+
+    /**
+     * Le dice a la tecla si sus negras vecinas existen en este teclado.
+     * Sin esto, la primera y la ultima tecla salian con un mordisco en la
+     * esquina de arriba, restando el hueco de una negra que no esta.
+     */
+    public void setNegrasVecinas(boolean izquierda, boolean derecha) {
+        this.hayNegraIzquierda = izquierda;
+        this.hayNegraDerecha = derecha;
+        invalidarForma();
     }
 
     @Override
@@ -109,11 +132,14 @@ public abstract class TeclaBlanca extends Tecla {
         Area forma = cuerpoRedondeadoAbajo(x, y, ancho, alto,
                 this.medidas.getRadioEsquina());
 
-        if (tieneMuescaIzquierda()) {
+        // Solo se recorta donde de verdad va a haber una negra encima. En los
+        // extremos del teclado la negra vecina no existe y la tecla va entera,
+        // como en un piano: el Do8 de un 88 teclas es un rectangulo completo.
+        if (tieneMuescaIzquierda() && this.hayNegraIzquierda) {
             forma.subtract(new Area(new Rectangle2D.Double(
                     x, y, this.medidas.getInvasionIzquierda(), altoNegra)));
         }
-        if (tieneMuescaDerecha()) {
+        if (tieneMuescaDerecha() && this.hayNegraDerecha) {
             int invade = this.medidas.getInvasionDerecha();
             forma.subtract(new Area(new Rectangle2D.Double(
                     x + ancho - invade, y, invade, altoNegra)));

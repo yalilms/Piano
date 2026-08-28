@@ -269,7 +269,7 @@ donde no se puede escribir, y el directorio de trabajo lo pone quien lo lance.
 .\probar.ps1
 ```
 
-205 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
+212 comprobaciones automáticas que no necesitan pantalla. Vigilan lo que se
 puede romper sin darse cuenta:
 
 - Que las teclas **encajen exactas** a cualquier escala, sin pisarse ni dejar
@@ -294,6 +294,14 @@ puede romper sin darse cuenta:
 - Que colocado como lo coloca la ventana no se salga de la escena ni se meta
   debajo de los parches de batería, y que **pintar no lance nada** a ningún
   tamaño, desde el mínimo de ventana hasta 2560×1400.
+- Que **los dos hilos convivan**. El secuenciador entrega los mensajes MIDI en
+  su propio hilo mientras Swing pinta y atiende los controles. Mover un canal a
+  otro instrumento con la canción sonando vaciaba y rellenaba la misma lista que
+  el hilo del MIDI estaba recorriendo, y los dos morían con
+  `ConcurrentModificationException`. Como el que muere es el del secuenciador,
+  **no salta ningún diálogo**: la canción se sigue oyendo y las notas dejan de
+  pintarse. Ahora la prueba mete dos millones de notas por un hilo mientras otro
+  pinta y un tercero cambia el reparto.
 - Que la conversión de pulsos a tiempo cuadre con la duración que declara Java,
   incluso en las canciones que cambian de tempo. Si se desviara, las notas
   cayendo se irían desincronizando.

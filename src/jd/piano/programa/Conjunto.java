@@ -63,7 +63,21 @@ public class Conjunto implements InstrumentoVisual {
     }
 
     private final TipoInstrumento[] porCanal;
-    private final List<Atril> atriles;
+
+    /**
+     * Los instrumentos que hay montados ahora mismo.
+     *
+     * Nunca se modifica en el sitio: para cambiar el reparto se construye una
+     * lista nueva, se mide, se coloca, y solo entonces se pone aqui. Es lo que
+     * permite mover un canal a otro instrumento sin parar la cancion.
+     *
+     * Antes se vaciaba y se rellenaba esta misma lista, y como el hilo del
+     * secuenciador la recorre en cada nota y el que pinta en cada frame, mover
+     * un canal reventaba los dos con ConcurrentModificationException. Volatile
+     * para que el cambio se vea, y la lista de solo lectura para que no se
+     * pueda volver a las andadas sin darse cuenta.
+     */
+    private volatile List<Atril> atriles;
 
     private Point posicion;
     private int anchoDisponible;
@@ -80,7 +94,7 @@ public class Conjunto implements InstrumentoVisual {
 
     public Conjunto() {
         this.porCanal = new TipoInstrumento[CANALES];
-        this.atriles = new ArrayList<>();
+        this.atriles = List.of();
         this.posicion = null;
         this.anchoDisponible = 900;
         this.altoDisponible = 460;
@@ -101,7 +115,7 @@ public class Conjunto implements InstrumentoVisual {
                     analisis.getNotaMinimaDe(canal),
                     analisis.getNotaMaximaDe(canal));
         }
-        conjunto.reconstruir();
+        conjunto.atriles = conjunto.construirAtriles();
         return conjunto;
     }
 
@@ -142,8 +156,13 @@ public class Conjunto implements InstrumentoVisual {
     }
 
     /**
-     * Manda ese canal a otro instrumento. Hay que recolocar el conjunto
-     * despues, porque los paneles cambian de tamano y de sitio.
+     * Manda ese canal a otro instrumento, con la cancion sonando.
+     *
+     * El reparto nuevo se monta, se mide y se coloca aparte, y se publica de una
+     * pieza al final. Los otros hilos ven el reparto viejo entero o el nuevo
+     * entero, nunca uno a medias: si se publicara antes de colocarlo, el hilo
+     * del MIDI podria pedirle la forma a un instrumento que todavia no tiene
+     * posicion.
      */
     public void asignar(int canal, TipoInstrumento tipo) {
         if (canal < 0 || canal >= CANALES || tipo == null
@@ -152,11 +171,12 @@ public class Conjunto implements InstrumentoVisual {
         }
         soltarTodas();
         this.porCanal[canal] = tipo;
-        reconstruir();
-        ajustarA(this.anchoDisponible, this.altoDisponible);
+        List<Atril> nuevos = construirAtriles();
+        repartirAlto(nuevos, this.anchoDisponible, this.altoDisponible);
         if (this.posicion != null) {
-            setPosicion(this.posicion.x, this.posicion.y);
+            colocar(nuevos, this.posicion.x, this.posicion.y);
         }
+        this.atriles = nuevos;
     }
 
     /**
@@ -164,9 +184,9 @@ public class Conjunto implements InstrumentoVisual {
      * pila no baile al cambiar una asignacion. Los que ya estaban se reutilizan,
      * asi lo que este sonando no se apaga al mover otro canal.
      */
-    private void reconstruir() {
-        List<Atril> anteriores = new ArrayList<>(this.atriles);
-        this.atriles.clear();
+    private List<Atril> construirAtriles() {
+        List<Atril> anteriores = this.atriles;
+        List<Atril> nuevos = new ArrayList<>();
         for (TipoInstrumento tipo : TipoInstrumento.values()) {
             List<Integer> suyos = new ArrayList<>();
             for (int canal = 0; canal < CANALES; canal++) {
@@ -186,8 +206,9 @@ public class Conjunto implements InstrumentoVisual {
             if (instrumento == null) {
                 instrumento = tipo.crear();
             }
-            this.atriles.add(new Atril(tipo, instrumento, suyos));
+            nuevos.add(new Atril(tipo, instrumento, suyos));
         }
+        return List.copyOf(nuevos);
     }
 
     @Override
@@ -322,12 +343,17 @@ public class Conjunto implements InstrumentoVisual {
 
     @Override
     public void ajustarA(int ancho, int alto) {
+        repartirAlto(this.atriles, ancho, alto);
+    }
+
+    /** Reparte el alto entre los instrumentos de esa lista, no de otra. */
+    private void repartirAlto(List<Atril> atriles, int ancho, int alto) {
         this.anchoDisponible = ancho;
         this.altoDisponible = alto;
-        if (this.atriles.isEmpty()) {
+        if (atriles.isEmpty()) {
             return;
         }
-        int cuantos = this.atriles.size();
+        int cuantos = atriles.size();
         // Los rotulos y los huecos no pueden comerse mas de un tercio del sitio
         this.altoRotulo = Math.min(ALTO_ROTULO, alto / Math.max(1, cuantos * 3));
         this.separacion = Math.min(SEPARACION, this.altoRotulo);
@@ -335,14 +361,14 @@ public class Conjunto implements InstrumentoVisual {
         int util = Math.max(0, alto - gastado);
 
         double pesoTotal = 0;
-        for (Atril atril : this.atriles) {
+        for (Atril atril : atriles) {
             pesoTotal += peso(atril.tipo);
         }
         // Se reparte con division entera y el ultimo se lleva lo que sobra: con
         // redondeo, cuatro paneles podian sumar un pixel mas que el hueco
         int repartido = 0;
         for (int i = 0; i < cuantos; i++) {
-            Atril atril = this.atriles.get(i);
+            Atril atril = atriles.get(i);
             int suyo = i == cuantos - 1 ? util - repartido
                     : (int) (util * peso(atril.tipo) / pesoTotal);
             repartido += suyo;
@@ -356,10 +382,15 @@ public class Conjunto implements InstrumentoVisual {
 
     @Override
     public void setPosicion(int x, int y) {
+        colocar(this.atriles, x, y);
+    }
+
+    /** Apila los instrumentos de esa lista, no los de otra. */
+    private void colocar(List<Atril> atriles, int x, int y) {
         this.posicion = new Point(x, y);
-        int ancho = getAnchura();
+        int ancho = anchoDe(atriles);
         int cursor = y;
-        for (Atril atril : this.atriles) {
+        for (Atril atril : atriles) {
             cursor += this.altoRotulo;
             int suAncho = atril.instrumento.getAnchura();
             atril.instrumento.setPosicion(x + (ancho - suAncho) / 2, cursor);
@@ -367,6 +398,14 @@ public class Conjunto implements InstrumentoVisual {
             atril.xRotulo = x + (ancho - suAncho) / 2;
             cursor += atril.instrumento.getAltura() + this.separacion;
         }
+    }
+
+    private static int anchoDe(List<Atril> atriles) {
+        int ancho = 0;
+        for (Atril atril : atriles) {
+            ancho = Math.max(ancho, atril.instrumento.getAnchura());
+        }
+        return ancho;
     }
 
     @Override

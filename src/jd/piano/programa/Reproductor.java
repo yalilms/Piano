@@ -27,26 +27,40 @@ public class Reproductor implements Receiver {
     /** El canal 10 en General MIDI es percusion: sus notas no son alturas. */
     private static final int CANAL_PERCUSION = 9;
 
+    private static final int CANALES = 16;
+
     /** Controladores que apagan todo lo que este sonando. */
     private static final int CC_TODAS_LAS_NOTAS_OFF = 123;
     private static final int CC_TODO_EL_SONIDO_OFF = 120;
 
     private Sequencer secuenciador;
     private Transmitter transmisor;
-    private InstrumentoVisual instrumento;
     private long duracionUs;
 
-    /** Notas que han sonado, para el contador de la barra. */
-    private int notasTocadas;
+    /*
+     * De aqui abajo, todo lo que cruza entre el hilo de Swing y el del
+     * secuenciador va volatile. Swing los escribe al cargar una cancion o al
+     * tocar un control; el secuenciador los lee en cada mensaje MIDI, que son
+     * cientos por segundo.
+     */
 
-    /** Canales silenciados: no suenan ni encienden teclas. */
-    private final boolean[] silenciado = new boolean[16];
+    private volatile InstrumentoVisual instrumento;
+
+    /** Notas que han sonado, para el contador de la barra. */
+    private volatile int notasTocadas;
+
+    /**
+     * Canales silenciados, un bit por canal. Es una mascara y no un array
+     * porque los elementos de un array no pueden ser volatiles, y con un int
+     * cabe entero: dieciseis canales, dieciseis bits.
+     */
+    private volatile int silenciados;
 
     /**
      * El sintetizador donde suena la cancion. No lo abre este objeto: se le
      * pasa el que ya esta abierto, para que solo haya un dueno del dispositivo.
      */
-    private Synthesizer sintetizador;
+    private volatile Synthesizer sintetizador;
 
     /**
      * Por donde salen los mensajes hacia el sintetizador. Antes el secuenciador
@@ -54,12 +68,13 @@ public class Reproductor implements Receiver {
      * ahora pasa todo por aqui, y eso es lo que permite cambiar el instrumento
      * de un canal o cortarlo de verdad.
      */
-    private Receiver salidaAlSintetizador;
+    private volatile Receiver salidaAlSintetizador;
 
     /** Instrumento forzado por canal, o -1 si manda la cancion. */
-    private final int[] programaForzado = new int[16];
+    private final java.util.concurrent.atomic.AtomicIntegerArray programaForzado =
+            new java.util.concurrent.atomic.AtomicIntegerArray(16);
 
-    private Bateria bateria;
+    private volatile Bateria bateria;
 
     /** Tope de la transposicion, en semitonos: dos octavas a cada lado. */
     public static final int TONO_MAXIMO = 12;
@@ -87,9 +102,12 @@ public class Reproductor implements Receiver {
         this.salidaAlSintetizador = null;
         this.bateria = null;
         this.semitonos = 0;
+        this.silenciados = 0;
         this.bucleInicioUs = -1;
         this.bucleFinUs = -1;
-        java.util.Arrays.fill(this.programaForzado, -1);
+        for (int canal = 0; canal < 16; canal++) {
+            this.programaForzado.set(canal, -1);
+        }
     }
 
     /**
@@ -191,7 +209,7 @@ public class Reproductor implements Receiver {
                 this.salidaAlSintetizador = null;
             }
         }
-        for (int canal = 0; canal < this.silenciado.length; canal++) {
+        for (int canal = 0; canal < CANALES; canal++) {
             aplicarSilencio(canal);
         }
     }
@@ -207,18 +225,18 @@ public class Reproductor implements Receiver {
      * cambio de programa, que si no lo pisaria.
      */
     public void setProgramaDeCanal(int canal, int programa) {
-        if (canal < 0 || canal >= this.programaForzado.length) {
+        if (canal < 0 || canal >= CANALES) {
             return;
         }
-        this.programaForzado[canal] = programa;
+        this.programaForzado.set(canal, programa);
         if (programa >= 0) {
             enviarCambioDePrograma(canal, programa);
         }
     }
 
     public int getProgramaForzado(int canal) {
-        return canal >= 0 && canal < this.programaForzado.length
-                ? this.programaForzado[canal] : -1;
+        return canal >= 0 && canal < CANALES
+                ? this.programaForzado.get(canal) : -1;
     }
 
     private void enviarCambioDePrograma(int canal, int programa) {
@@ -232,10 +250,12 @@ public class Reproductor implements Receiver {
 
     /** Silencia o reactiva un canal, en sonido y en imagen. */
     public void setSilenciado(int canal, boolean silencio) {
-        if (canal < 0 || canal >= this.silenciado.length) {
+        if (canal < 0 || canal >= CANALES) {
             return;
         }
-        this.silenciado[canal] = silencio;
+        this.silenciados = silencio
+                ? this.silenciados | (1 << canal)
+                : this.silenciados & ~(1 << canal);
         aplicarSilencio(canal);
         if (silencio && this.instrumento != null) {
             // Solo las de ese canal: soltarTodas apagaba tambien las de los demas
@@ -244,14 +264,15 @@ public class Reproductor implements Receiver {
     }
 
     public boolean estaSilenciado(int canal) {
-        return canal >= 0 && canal < this.silenciado.length && this.silenciado[canal];
+        return canal >= 0 && canal < CANALES
+                && (this.silenciados & (1 << canal)) != 0;
     }
 
     private void aplicarSilencio(int canal) {
         if (this.sintetizador != null) {
             MidiChannel[] canales = this.sintetizador.getChannels();
             if (canal < canales.length && canales[canal] != null) {
-                canales[canal].setMute(this.silenciado[canal]);
+                canales[canal].setMute(estaSilenciado(canal));
             }
         }
     }
@@ -294,10 +315,10 @@ public class Reproductor implements Receiver {
         this.notasTocadas = 0;
         // Los silenciados no se arrastran de una cancion a otra: el panel de
         // canales se rehace con todo activado y quedarian descuadrados.
-        for (int canal = 0; canal < this.silenciado.length; canal++) {
-            this.silenciado[canal] = false;
+        this.silenciados = 0;
+        for (int canal = 0; canal < CANALES; canal++) {
             aplicarSilencio(canal);
-            this.programaForzado[canal] = -1;
+            this.programaForzado.set(canal, -1);
         }
     }
 
@@ -431,15 +452,15 @@ public class Reproductor implements Receiver {
         // encendida para siempre.
         boolean apaga = comando == ShortMessage.NOTE_OFF
                 || (comando == ShortMessage.NOTE_ON && sm.getData2() == 0);
-        if (this.silenciado[canal] && !apaga) {
+        if (estaSilenciado(canal) && !apaga) {
             return;
         }
 
         // Si el usuario ha forzado el instrumento de este canal, el cambio de
         // programa de la cancion no debe pisarlo
         if (comando == ShortMessage.PROGRAM_CHANGE
-                && this.programaForzado[canal] >= 0) {
-            enviarCambioDePrograma(canal, this.programaForzado[canal]);
+                && this.programaForzado.get(canal) >= 0) {
+            enviarCambioDePrograma(canal, this.programaForzado.get(canal));
             return;
         }
 
@@ -481,7 +502,7 @@ public class Reproductor implements Receiver {
      * a los pads y no al piano. Antes se descartaba: eran el 35% de las notas.
      */
     private void atenderPercusion(ShortMessage sm, long marcaDeTiempo) {
-        if (this.silenciado[CANAL_PERCUSION]
+        if (estaSilenciado(CANAL_PERCUSION)
                 && sm.getCommand() == ShortMessage.NOTE_ON && sm.getData2() > 0) {
             return;
         }

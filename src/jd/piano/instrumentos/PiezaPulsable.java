@@ -35,7 +35,7 @@ public abstract class PiezaPulsable {
     /** Holgura al repintar, para que entren el hundimiento y las sombras. */
     public static final int MARGEN_REPINTADO = 6;
 
-    protected Point posicion;
+    protected volatile Point posicion;
     private final int nota;
 
     /*
@@ -53,9 +53,14 @@ public abstract class PiezaPulsable {
      * Construir la forma cuesta, y a 60 fps se pide muchas veces por segundo.
      * Se cachea como Path2D y no como Area porque rellenar un Area obliga a
      * Java2D a retesetelar la geometria en cada fill.
+     *
+     * Volatiles, y se leen a una variable local antes de mirarlas: quien
+     * recoloca el instrumento las pone a null, y comprobar el campo y devolverlo
+     * despues dejaba una rendija por la que se colaba un null. Si dos hilos
+     * coinciden, lo peor que pasa es que la forma se construya dos veces.
      */
-    private Shape formaCache;
-    private Rectangle cajaCache;
+    private volatile Shape formaCache;
+    private volatile Rectangle cajaCache;
 
     protected PiezaPulsable(int nota) {
         this.nota = nota;
@@ -158,14 +163,16 @@ public abstract class PiezaPulsable {
      * usar para saber si un clic del raton cae dentro.
      */
     public final Shape getForma() {
-        if (this.formaCache == null) {
+        Shape forma = this.formaCache;
+        if (forma == null) {
             if (this.posicion == null) {
                 throw new IllegalStateException(
                         "Hay que llamar a setPosicion antes de usar la forma");
             }
-            this.formaCache = new Path2D.Double(construirForma());
+            forma = new Path2D.Double(construirForma());
+            this.formaCache = forma;
         }
-        return this.formaCache;
+        return forma;
     }
 
     /**
@@ -174,11 +181,13 @@ public abstract class PiezaPulsable {
      * debe modificarla.
      */
     public Rectangle getCajaRepintado() {
-        if (this.cajaCache == null) {
-            this.cajaCache = getForma().getBounds();
-            this.cajaCache.grow(MARGEN_REPINTADO, MARGEN_REPINTADO);
+        Rectangle caja = this.cajaCache;
+        if (caja == null) {
+            caja = getForma().getBounds();
+            caja.grow(MARGEN_REPINTADO, MARGEN_REPINTADO);
+            this.cajaCache = caja;
         }
-        return this.cajaCache;
+        return caja;
     }
 
     /** La forma tal y como se pinta: baja unos pixeles si esta pulsada. */

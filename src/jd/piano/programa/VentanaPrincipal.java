@@ -9,6 +9,7 @@ import jd.piano.teclas.Piano;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -29,6 +30,7 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
+import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -75,7 +77,8 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
     private final BarraDeMenu menu;
     private final DefaultListModel<File> modeloCanciones;
     private final JList<File> listaCanciones;
-    private final JComboBox<String> selectorInstrumento;
+    private final JComboBox<BancoDeSonidos.Sonido> selectorInstrumento;
+    private final JLabel etiquetaBanco;
     private final JComboBox<TipoInstrumento> selectorVerComo;
     private final JLabel etiquetaInfo;
     private final PantallaInicio pantallaInicio;
@@ -135,16 +138,22 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
             this.escena.setFondo(fondo);
         }
 
-        this.selectorInstrumento = new JComboBox<>(PanelCanales.nombresDeInstrumento());
+        // Todos los que el sintetizador sabe hacer, no los 128 de la lista fija:
+        // ahi estan los efectos de sonido y las variaciones
+        this.selectorInstrumento = new JComboBox<>();
+        this.etiquetaBanco = new JLabel(" ");
+        this.etiquetaBanco.setFont(this.etiquetaBanco.getFont().deriveFont(10f));
+        rellenarSonidos();
         this.selectorInstrumento.setToolTipText("Con que instrumento tocas tu");
-        this.selectorInstrumento.setSelectedIndex(Math.max(0, Math.min(
-                this.selectorInstrumento.getItemCount() - 1,
-                Preferencias.getEntero(Preferencias.TOCAS_CON, 0))));
-        this.sintetizador.setPrograma(this.selectorInstrumento.getSelectedIndex());
         this.selectorInstrumento.addActionListener(e -> {
-            int elegido = this.selectorInstrumento.getSelectedIndex();
-            this.sintetizador.setPrograma(elegido);
-            Preferencias.setEntero(Preferencias.TOCAS_CON, elegido);
+            Object elegido = this.selectorInstrumento.getSelectedItem();
+            if (elegido instanceof BancoDeSonidos.Sonido sonido) {
+                this.sintetizador.setSonido(sonido.banco(), sonido.programa());
+                // Se guarda el sitio y no la posicion en la lista: la posicion
+                // cambia en cuanto se carga otro banco de sonidos
+                Preferencias.setEntero(Preferencias.TOCAS_CON,
+                        sonido.banco() * 128 + sonido.programa());
+            }
             this.lienzo.requestFocusInWindow();
         });
 
@@ -217,13 +226,21 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
         verComo.add(new JLabel(" Ver como "), BorderLayout.WEST);
         verComo.add(this.selectorVerComo, BorderLayout.CENTER);
 
+        JButton azar = new JButton("?");
+        azar.setToolTipText("Un sonido al azar de los "
+                + this.selectorInstrumento.getItemCount() + " que hay");
+        azar.setMargin(new java.awt.Insets(0, 5, 0, 5));
+        azar.addActionListener(e -> sonidoAlAzar());
+
         JPanel tocasCon = new JPanel(new BorderLayout(4, 0));
         tocasCon.add(new JLabel(" Tocas con "), BorderLayout.WEST);
         tocasCon.add(this.selectorInstrumento, BorderLayout.CENTER);
+        tocasCon.add(azar, BorderLayout.EAST);
 
-        JPanel arriba = new JPanel(new BorderLayout(0, 4));
+        JPanel arriba = new JPanel(new BorderLayout(0, 2));
         arriba.add(verComo, BorderLayout.NORTH);
-        arriba.add(tocasCon, BorderLayout.SOUTH);
+        arriba.add(tocasCon, BorderLayout.CENTER);
+        arriba.add(this.etiquetaBanco, BorderLayout.SOUTH);
 
         JPanel abajo = new JPanel(new BorderLayout(0, 4));
         abajo.add(this.etiquetaInfo, BorderLayout.NORTH);
@@ -346,6 +363,87 @@ public class VentanaPrincipal extends JFrame implements BarraDeMenu.Acciones {
 
     private void mostrarElPiano() {
         this.cambiador.show(this.tarjetas, "piano");
+    }
+
+    /**
+     * Rellena el desplegable con lo que el sintetizador tenga ahora mismo, y
+     * deja elegido lo que estuviera puesto.
+     *
+     * Se llama al arrancar y cada vez que se carga un banco de sonidos, porque
+     * entonces la lista es otra.
+     */
+    private void rellenarSonidos() {
+        BancoDeSonidos banco =
+                BancoDeSonidos.de(this.sintetizador.getSintetizador());
+        int guardado = Preferencias.getEntero(Preferencias.TOCAS_CON, 0);
+        BancoDeSonidos.Sonido elegido = banco.buscar(guardado / 128,
+                guardado % 128);
+        if (elegido == null) {
+            elegido = banco.porDefecto();
+        }
+
+        // Sin avisos mientras se rellena, que si no cada add dispara el listener
+        ActionListener[] oyentes = this.selectorInstrumento.getActionListeners();
+        for (ActionListener oyente : oyentes) {
+            this.selectorInstrumento.removeActionListener(oyente);
+        }
+        this.selectorInstrumento.removeAllItems();
+        for (BancoDeSonidos.Sonido sonido : banco.getSonidos()) {
+            this.selectorInstrumento.addItem(sonido);
+        }
+        if (elegido != null) {
+            this.selectorInstrumento.setSelectedItem(elegido);
+            this.sintetizador.setSonido(elegido.banco(), elegido.programa());
+        }
+        for (ActionListener oyente : oyentes) {
+            this.selectorInstrumento.addActionListener(oyente);
+        }
+        this.etiquetaBanco.setText("  " + banco.cuantos() + " sonidos - "
+                + banco.getNombreDelBanco());
+    }
+
+    /** Un sonido al azar. Con doscientos y pico es la forma de descubrirlos. */
+    private void sonidoAlAzar() {
+        int cuantos = this.selectorInstrumento.getItemCount();
+        if (cuantos > 1) {
+            int antes = this.selectorInstrumento.getSelectedIndex();
+            int nuevo = antes;
+            while (nuevo == antes) {
+                nuevo = (int) (Math.random() * cuantos);
+            }
+            this.selectorInstrumento.setSelectedIndex(nuevo);
+        }
+        this.lienzo.requestFocusInWindow();
+    }
+
+    /**
+     * Carga un fichero de banco de sonidos. Es la via para pasar de los
+     * doscientos y pico que trae Java a los miles de un SoundFont.
+     */
+    @Override
+    public void cargarBanco() {
+        JFileChooser selector = new JFileChooser();
+        selector.setDialogTitle("Cargar un banco de sonidos");
+        selector.setFileFilter(new FileNameExtensionFilter(
+                "Bancos de sonidos (.sf2, .dls)", "sf2", "dls"));
+        if (selector.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        File fichero = selector.getSelectedFile();
+        try {
+            int cuantos = this.sintetizador.cargarBanco(fichero);
+            rellenarSonidos();
+            JOptionPane.showMessageDialog(this,
+                    "Cargado " + fichero.getName() + ".\n"
+                            + "Ahora hay " + cuantos + " sonidos para elegir.",
+                    "Banco de sonidos", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception error) {
+            JOptionPane.showMessageDialog(this,
+                    "No se ha podido cargar ese banco de sonidos:\n"
+                            + error.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+        this.lienzo.requestFocusInWindow();
     }
 
     /**

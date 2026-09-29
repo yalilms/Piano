@@ -83,6 +83,11 @@ public class BarraDeMenu extends JMenuBar {
                 Preferencias.ENCADENAR, this.encadenar.isSelected()));
         menuVer.add(this.encadenar);
         menuVer.addSeparator();
+        JMenuItem banco = new JMenuItem("Cargar banco de sonidos...");
+        banco.setToolTipText("Un fichero .sf2 o .dls con mas instrumentos");
+        banco.addActionListener(e -> acciones.cargarBanco());
+        menuVer.add(banco);
+        menuVer.addSeparator();
         menuVer.add(item("Guardar captura", KeyEvent.VK_G, acciones::capturar));
         add(menuVer);
 
@@ -169,5 +174,8 @@ public class BarraDeMenu extends JMenuBar {
         void capturar();
 
         void ayuda();
+
+        /** Cargar un fichero de banco de sonidos (.sf2 o .dls). */
+        void cargarBanco();
     }
 }

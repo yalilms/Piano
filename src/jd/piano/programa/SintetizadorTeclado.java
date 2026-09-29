@@ -62,7 +62,11 @@ public class SintetizadorTeclado {
     private InstrumentoVisual instrumento;
     private int octava;
     private int programa;
+    private int banco;
     private boolean sostenido;
+
+    /** Banco de sonidos externo, si se ha cargado alguno. */
+    private javax.sound.midi.Soundbank bancoCargado;
 
     /** Que nota esta sonando por cada tecla del ordenador pulsada. */
     private final Map<Integer, Integer> sonando = new HashMap<>();
@@ -74,6 +78,8 @@ public class SintetizadorTeclado {
         this.octava = 0;
         this.programa = 0;
         this.sostenido = false;
+        this.banco = 0;
+        this.bancoCargado = null;
     }
 
     public void conectar(InstrumentoVisual instrumento) {
@@ -108,20 +114,64 @@ public class SintetizadorTeclado {
     }
 
     /**
-     * Con que instrumento se toca. El banco que trae Java tiene los 128 de
-     * General MIDI cargados desde el arranque, asi que solo hace falta pedir
-     * el cambio de programa.
+     * Con que instrumento se toca, dentro del banco de siempre.
+     * Es lo mismo que setSonido con el banco 0.
      */
     public void setPrograma(int programa) {
+        setSonido(0, programa);
+    }
+
+    /**
+     * Con que instrumento se toca, diciendo tambien de que banco.
+     *
+     * El banco es lo que abre la puerta a todo lo que no son los 128 del
+     * estandar: las variaciones y los efectos de sonido del GS estan en los
+     * bancos 128, 256, 384 y siguientes. En MIDI el banco son catorce bits, y se
+     * pasa tal cual lo da el sintetizador.
+     */
+    public void setSonido(int banco, int programa) {
+        this.banco = Math.max(0, banco);
         this.programa = Math.max(0, Math.min(127, programa));
         soltarTodo();
         if (this.canal != null) {
-            this.canal.programChange(this.programa);
+            this.canal.programChange(this.banco, this.programa);
         }
     }
 
     public int getPrograma() {
         return this.programa;
+    }
+
+    public int getBanco() {
+        return this.banco;
+    }
+
+    /**
+     * Carga un banco de sonidos externo y deja puesto el sonido equivalente.
+     *
+     * Se descarga el que se hubiera cargado antes, que si no cada fichero se
+     * queda en memoria para siempre. El que trae Java no se toca: es el que
+     * queda debajo si el nuevo no cubre algun sitio.
+     *
+     * @return cuantos instrumentos hay disponibles despues de cargarlo
+     */
+    public int cargarBanco(java.io.File fichero) throws Exception {
+        soltarTodo();
+        javax.sound.midi.Soundbank nuevo =
+                BancoDeSonidos.cargarFichero(this.sintetizador, fichero);
+        if (this.bancoCargado != null) {
+            this.sintetizador.unloadAllInstruments(this.bancoCargado);
+        }
+        this.bancoCargado = nuevo;
+        // El sonido que estaba puesto puede no existir en el banco nuevo: se
+        // vuelve a pedir, y si no esta el sintetizador pone lo que tenga
+        setSonido(this.banco, this.programa);
+        return this.sintetizador.getAvailableInstruments().length;
+    }
+
+    /** Si se ha cargado un banco de sonidos externo. */
+    public boolean tieneBancoPropio() {
+        return this.bancoCargado != null;
     }
 
     /**

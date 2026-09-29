@@ -372,4 +372,4 @@ El botón **Captura**, o `Ctrl+G`, guarda lo que se ve en `capturas/` como PNG.
 
 ## 👥 Autores
 
-Proyecto de grupo. *(Pendiente de completar con los nombres.)*
+Yalil Musa, Alberto y Juan
